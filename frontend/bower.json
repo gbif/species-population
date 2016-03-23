@@ -1,0 +1,22 @@
+{
+  "name": "myBaseStaticBuild",
+  "description": "Just a simple build process with gulp to get started on small test projects",
+  "main": "gulpfile.js",
+  "authors": [
+    "gbif"
+  ],
+  "license": "Apache 2.0",
+  "keywords": [
+    "starter"
+  ],
+  "homepage": "https://github.com/gbif/species-population",
+  "moduleType": [],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
