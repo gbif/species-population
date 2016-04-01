@@ -23,7 +23,7 @@
     <meta name="msapplication-TileImage" content="/mstile-144x144.png">
     <meta name="theme-color" content="#000">
 
-    <title>GBIF-EBV</title>
+    <title>GBIF relative abundance</title>
 
     <!-- style:css -->
     <link rel="stylesheet" type="text/css" href="/css/index.css">
@@ -36,31 +36,54 @@
 <body>
 
 <div id="page-wrapper" class="page-wrapper">
-<header>
-    <div class="logo"></div>
-    <div class="title">
-        GBIF
-    </div>
-</header>
+    <header>
+        <div class="logo"></div>
+        <div class="title">
+            GBIF
+        </div>
+    </header>
     <main>
         <section class="introduction">
             <div>
                 <h1>
-                    EBV
+                    Relative abundance
                 </h1>
                 <p>
-                    Lorem ipsum dolor sit amet, malesuada mauris suspendisse. Faucibus vehicula mauris ut, et nec ipsum vulputate arcu non, amet massa egestas est. Id a wisi aliquam vitae sit, facilisi hymenaeos mauris nec, nec cum amet tempus. Amet mollis, dui condimentum mauris, nibh consectetuer lectus tellus, mauris suspendisse integer lacus duis neque.
-                </p>
-                <p>
-                    Dolor laoreet quis, maecenas parturient purus dictum. Ante a cursus mi scelerisque pretium, wisi in leo donec.
+                    GBIF have worked as a central data repository for more than 10 years. We are starting to have so much data that we can olor laoreet quis, maecenas parturient purus dictum. Ante a cursus mi scelerisque pretium, wisi in leo donec.
                 </p>
             </div>
         </section>
-        <section class="app">
-            <div class="ct-chart">
-
+        <section class="story" id="story">
+            <div class="mapwrapper" id="mapwrapper">
+                <div id='map' class="map"></div>
             </div>
-            <div id='map' class="map"></div>
+            <div class="storyline">
+                <div class="chapter" id="copenhagen">
+                    <h1>copenhagen</h1>
+                    <div class="ct-chart"></div>
+                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
+                </div>
+                <div class="chapter" id="denmark">
+                    <h1>Denmark</h1>
+                    <div class="ct-chart"></div>
+                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
+                </div>
+                <div class="chapter" id="london">
+                    <h1>london</h1>
+                    <div class="ct-chart"></div>
+                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
+                </div>
+                <div class="chapter" id="woolwich">
+                    <h1>woolwich</h1>
+                    <div class="ct-chart"></div>
+                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
+                </div>
+                <div class="chapter">
+                    <h1> lksjdhf lkjh </h1>
+                    <div class="ct-chart"></div>
+                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
+                </div>
+            </div>
         </section>
         <section class="description">
             <div>
@@ -84,9 +107,13 @@
 
 
 <!-- inject:js -->
+<script src="/scripts/regression.min.js"></script>
+<script src="/scripts/jquery.min.js"></script>
 <script src="/scripts/mapbox-gl_patched_issue2236.js"></script>
 <script src="/scripts/chartist.min.js"></script>
+<script src="/scripts/chapters.js"></script>
 <script src="/scripts/main.js"></script>
+<script src="/scripts/navigation.js"></script>
 <!-- endinject -->
 </body>
 </html>

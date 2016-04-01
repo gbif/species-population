@@ -1,3 +1,4 @@
+@import "story"
 html, body {
 	margin 0
 	padding 0px
@@ -6,37 +7,38 @@ html, body {
 	font-family 'Open Sans', sans-serif
 	background #fefefe
 	color #444
+}
+* {
 	box-sizing border-box
 }
 
 header {
-	height 70px
-	background #5FB367
+	height $headerHeight
+	background $mainColor
 	color white
 }
+section.introduction {
+	min-height "calc(100vh - %s)" % $headerHeight
+	background $mainColor
+	>div {
+		margin auto
+		max-width 600px
+		padding 50px
+	}
+}
+
 
 h1, h2, h3 {
-	text-align center
+	//text-align center
 	font-size 25px
 }
 h2 {
 	font-size 22px
 }
 
-section.introduction>div, section.description>div {
+section.description>div {
 	width 800px
 	max-width 90%
 	margin auto
 	padding 20px
-}
-
-section.introduction {
-	background #f8f8f8
-}
-
-.map {
-	height 500px
-	width 90%
-	margin 70px auto
-	max-width 1000px
 }

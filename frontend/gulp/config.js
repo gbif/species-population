@@ -1,6 +1,7 @@
 'use strict';
 
 var path = require('path');
+var gutil = require('gulp-util');
 
 var dest = './dist';
 var src = './src/';
@@ -13,7 +14,7 @@ var config = {
     },
     js: {
         paths: [path.join(src, 'js/**/*.js')],
-        src: ['./bower_components/chartist/dist/chartist.min.js', path.join(src, 'js/mapbox-gl_patched_issue2236.js'), path.join(src, 'js/**/*.js')],
+        src: ['./node_modules/regression/build/regression.min.js', './bower_components/jquery/dist/jquery.min.js', './bower_components/chartist/dist/chartist.min.js', path.join(src, 'js/mapbox-gl_patched_issue2236.js'), path.join(src, 'js/**/*.js')],
         dest: path.join(dest, 'scripts')
     },
     html: {

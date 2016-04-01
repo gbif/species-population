@@ -1,10 +1,11 @@
 mapboxgl.accessToken = 'pk.eyJ1IjoiZ2JpZiIsImEiOiJjaW0xeXU1c3gwMG04dm1tNXB3cjJ3Zm12In0.8A2pUP_lgL19w4G5L0fDNw';
 
 var gb = {};
-var datasetLayer = 'http://localhost:7001/{z}/{x}/{y}.pbf';
+var key = 1898286;
+var datasetLayer = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}.pbf';
 //var datasetLayer = 'http://localhost:3002/api/{z}/{x}/{y}.pbf';
 
-var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=1&type=TAXON&key=797";
+var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=2&type=TAXON&key=" + key;
 
 /**
  * Initialises the map, taking the year slider into consideration.
@@ -35,7 +36,6 @@ function initMap(map) {
         "source": "occurrence"
     });
 
-    // interactive data for the click grid layer
     map.addLayer({
         "id": "statistics",
         "type": "line",
@@ -43,10 +43,23 @@ function initMap(map) {
         "source": "datasets",
         "source-layer": "statistics",
         "paint": {
-            "line-color": "#000",
+            "line-color": "#7b7b7b",
             "line-opacity": 1,
-            "line-width": 2
+            "line-width": 1,
+            "line-blur": 1
         }
+    });
+    addStatLayers();
+
+    map.addSource('test', {
+        type: 'geojson',
+        "data": sampleAreaGeojson
+    });
+
+    map.addLayer({
+        "id": "testLayer",
+        "type": "geojson",
+        "source": "test"
     });
 
     // a layer that activates only on a hover over a feature (a cell)
@@ -64,19 +77,52 @@ function initMap(map) {
         },
         "filter": ["==", "id", ""]
     });
+}
 
-    // a layer that activates only on a hover over a feature (a cell)
-    map.addLayer({
-        "id": "coverage-hover-fill",
-        "type": "fill",
-        "source": "datasets",
-        "source-layer": "statistics",
-        "layout": {},
-        "paint": {
-            "fill-color": "#FCA107",
-            "fill-opacity": 0.2
-        },
-        "filter": ["==", "id", ""]
+function addStatLayers(key) {
+    var colors = [
+        '#a50f15',
+        '#de2d26',
+        '#fb6a4a',
+        '#fcae91',
+        '#fee5d9',
+        '#edf8e9',
+        '#bae4b3',
+        '#74c476',
+        '#31a354',
+        '#006d2c'
+    ];
+    //for (var i = colors.length-1; i < )
+    var breakpoints = colors.reverse().map(function(e, i) {
+        return [ (colors.length-5-i)*0.0002, e ];
+    });
+
+    //var breakpoints = [
+    //    [0.005, '#0000FF'],
+    //    [0.0001, '#00FF00'],
+    //    [-10, '#FF0000']
+    //];
+
+    breakpoints.forEach(function (layer, i) {
+        var filter = i == 0 ?
+            [">=", "m2", layer[0]] :
+            ["all",
+                [">=", "m2", layer[0]],
+                ["<", "m2", breakpoints[i - 1][0]]];
+        if (i==breakpoints.length-1) filter = ["<", "m2", layer[0]]
+
+        map.addLayer({
+            "id": "statistics-" + i,
+            "type": "fill",
+            'interactive': true,
+            "source": "datasets",
+            "source-layer": "statistics",
+            "paint": {
+                "fill-color": layer[1],
+                "fill-opacity": 0.4
+            },
+            "filter": filter
+        });
     });
 }
 
@@ -85,7 +131,9 @@ var map = new mapboxgl.Map({
     style: 'mapbox://styles/mapbox/light-v8',
     center: [10, 50],
     zoom: 3,
-    maxZoom: 8.9
+    bearing: 0,
+    pitch: 0
+    //maxZoom: 8.9
 });
 map.addControl(new mapboxgl.Navigation());
 
@@ -108,8 +156,10 @@ map.on('click', function (e) {
         if (err || !features.length) {
             return;
         }
-
-        debugger;
+debugger;
+        //normalize
+        var data = features[0].properties;
+        showStats(data);
     });
 });
 
@@ -137,64 +187,61 @@ map.on('mousemove', function (e) {
 
 
 
-var prop = {
-    "1990": "0.1",
-    "1991": "0.2",
-    "1992": "0.3",
-    "1993": "0.4",
-    "1994": "0.5",
-    "1996": "0.6",
-    "totalOccurrences": "234",
-    "totalAllSpeciesInGroup": "453",
-    "c": "-3425",
-    "id": "3/4/2/1",
-    "m": "0.001"
-};
 
-var timespan = Array.apply(null, Array(2017-1900)).map(function (_, i) {return 1900 + i;});
-var dataOptions = {
-    min: undefined,
-    max: undefined
-};
-timespan.forEach(function(e) {
-    if (!dataOptions.min && prop.hasOwnProperty(e)) dataOptions.min = e;
-    if (prop.hasOwnProperty(e)) dataOptions.max = e;
-});
-var labels = Array.apply(null, Array(1+dataOptions.max-dataOptions.min)).map(function (_, i) {return dataOptions.min + i;});
+function showStats(data) {
+    var labels = [];
+    var points = [];
+    var normalized = [];
+    var line = [];
+    for (var i = 1900; i < 2020; i++) {
+        if (data.hasOwnProperty('' + i)) {
+            var s = parseInt(data[i]);
+            var g = parseInt(data[i + '_group']);
+            var val = s/g;
+            normalized.push([i, val]);
+            points.push(val);
+            labels.push(i);
 
-
-var chart = new Chartist.Line('.ct-chart', {
-    labels: ["'50", "'60", "'70", "'80", "'90", "'00", "'10"],
-    // Naming the series with the series object array notation
-    series: [{
-        name: 'line',
-        data: [0, null, null, null, null, null, 5]
-    }, {
-        name: 'points',
-        data: [4, null, null, null, 1, 3, 6, 4]
-    }
-    ]
-}, {
-    fullWidth: true,
-    axisX: {
-        labelInterpolationFnc: function(value, index) {
-            return index % ((dataOptions.max-dataOptions.min)/2) === 0 ? value : '';
-        },
-        showGrid: false
-    },
-    series: {
-        'line': {
-            lineSmooth: Chartist.Interpolation.none({
-                fillHoles: true
-            }),
-            showLine: true,
-            showArea: false,
-            showPoint: false
-        },
-        'points': {
-            showLine: false,
-            showArea: false,
-            showPoint: true
+            line.push( parseFloat(data.m)*i + parseFloat(data.c) );
         }
     }
-});
+    var result = regression('linear',normalized);
+
+
+
+    var chart = new Chartist.Line('.ct-chart', {
+        labels: labels,
+        // Naming the series with the series object array notation
+        series: [{
+            name: 'line',
+            data: line
+        }, {
+            name: 'points',
+            data: points
+        }
+        ]
+    }, {
+        fullWidth: true,
+        axisX: {
+            labelInterpolationFnc: function(value, index) {
+                return index % 5 === 0 ? value : '';
+            },
+            showGrid: false
+        },
+        series: {
+            'line': {
+                lineSmooth: Chartist.Interpolation.none({
+                    fillHoles: true
+                }),
+                showLine: true,
+                showArea: false,
+                showPoint: false
+            },
+            'points': {
+                showLine: false,
+                showArea: false,
+                showPoint: true
+            }
+        }
+    });
+}

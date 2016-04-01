@@ -18,5 +18,9 @@
     "bower_components",
     "test",
     "tests"
-  ]
+  ],
+  "dependencies": {
+    "chartist": "~0.9.7",
+    "jquery": "~2.2.2"
+  }
 }
