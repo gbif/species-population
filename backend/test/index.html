@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8'/>
+    <title>Species populate</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no'/>
+
+    <!--script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.15.0/mapbox-gl.js'></script-->
+    <script src="./mapbox-gl_patched_issue2236.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.3.0/nouislider.min.js"></script>
+    <script src="https://code.jquery.com/jquery-2.2.1.min.js"
+            integrity="sha256-gvQgAFzTH6trSrAWoH1iPo9Xc96QxSZ3feW6kem+O00=" crossorigin="anonymous"></script>
+
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.15.0/mapbox-gl.css' rel='stylesheet'/>
+    <link href='nouislider.css' rel='stylesheet'/>
+    <link href='style.css' rel='stylesheet'/>
+
+</head>
+<body>
+<div id='map' class="map"></div>
+
+<div id='features' class='features'>
+    <a href="#map" class="closeFeatures">&#x2715;</a>
+    <div class="logo"></div>
+    <h3>Species populations trends</h3>
+    <h4>A pilot to explore if the data supports inference of population trends</h4>
+    <p>By Morten and Tim.</p>
+    <p>
+    Adjust the threshold for number of years of data requires per location bin:
+    <select onchange="updateThreshold(this)">
+      <option value="2">2 years</option>
+      <option value="5">5 years</option>
+      <option value="10">10 years</option>
+      <option value="10">15 years</option>
+      <option value="25">25 years</option>
+    </select>
+    </p>
+</div>
+<div class='map-overlay top'>
+    <div class='map-overlay-inner'>
+        <fieldset>
+            <label>Year range (<span id="years">1900 - 2016</span>)</label>
+            <label id='month'></label>
+            <div id='slider'/>
+        </fieldset>
+    </div>
+</div>
+
+<script>
+
+function updateThreshold(select) {
+  yearThreshold = select.value;
+  initMap(map, Math.floor(minYear), Math.floor(maxYear));  
+}
+
+mapboxgl.accessToken = 'pk.eyJ1IjoiZ2JpZiIsImEiOiJjaW0xeXU1c3gwMG04dm1tNXB3cjJ3Zm12In0.8A2pUP_lgL19w4G5L0fDNw';
+
+var minYear = 1900;
+var maxYear = 2016;
+var yearThreshold = 2; // minimum number of years for which there has to be data
+var speciesKey=1958323;
+var regressionLayer = "http://localhost:7001/" + speciesKey + "/{z}/{x}/{y}/points.pbf";
+var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=4&type=TAXON&key="+speciesKey;
+
+/**
+ * Initialises the map, taking the year slider into consideration.
+ */
+function initMap(map, minYear, maxYear) {
+    // Remove layers if they exist
+    if (map.getSource('regression')) map.removeSource('regression');
+    if (map.getSource('occurrence')) map.removeSource('occurrence');
+    if (map.getLayer('regression-fill-0')) map.removeLayer('regression-fill-0');
+    if (map.getLayer('regression-fill-1')) map.removeLayer('regression-fill-1');
+    if (map.getLayer('occurrence-tiles')) map.removeLayer('occurrence-tiles');
+
+    map.addSource('regression', {
+        type: 'vector',
+        "tiles": [regressionLayer + "?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold]
+    });
+    map.addSource('occurrence', {
+        type: 'raster',
+        "tiles": [occurrenceLayer + "&" + yearsToGBIFParams(minYear, maxYear)],
+        "tileSize": 256
+    });
+
+    // occurrence layer
+    map.addLayer({
+        "id": "occurrence-tiles",
+        "type": "raster",
+        "source": "occurrence"
+    });
+
+    map.addLayer({
+        "id": "regression-fill-0",
+        "type": "circle",
+        "source": "regression",
+        "source-layer": "points",
+        "paint": {
+            "circle-radius": 5,
+            "circle-color": "#0F0",
+            "circle-opacity": 0.5            
+        },
+        "filter": ['>=', "slope", 0]
+        
+    });
+    map.addLayer({
+        "id": "regression-fill-1",
+        "type": "circle",
+        "source": "regression",
+        "source-layer": "points",
+        "paint": {
+            "circle-radius": 5,
+            "circle-color": "#F00",
+            "circle-opacity": 0.5            
+        },
+        "filter": ['<', "slope", 0]
+    });
+}
+
+/**
+ * Takes the year range to build the params needed for the GBIF occurrence layer.
+ */
+function yearsToGBIFParams(minYear, maxYear) {
+    var opts = [];
+    for (var y = Math.min(minYear); y <= Math.min(maxYear); y += 10) {
+        opts.push("layer=SPE_" + y + "_" + (y + 10));
+        opts.push("layer=OBS_" + y + "_" + (y + 10));
+        opts.push("layer=OTH_" + y + "_" + (y + 10));
+    }
+    return opts.join("&");
+}
+
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/light-v8',
+    center: [10, 50],
+    zoom: 3,
+    maxZoom: 8.9
+});
+map.addControl(new mapboxgl.Navigation());
+
+map.on('style.load', function () {
+    initMap(map, 1900, 2016);
+});
+
+noUiSlider.create(slider, {
+    start: [1900, 2016],
+    step: 1,
+    connect: true,
+    range: {
+        'min': 1900,
+        'max': 2016 // ok for a pilot project which uses static(!) data
+    }
+});
+slider.noUiSlider.on('update', function (vals) {
+    document.getElementById("years").innerText = Math.floor(vals[0]) + " - " + Math.floor(vals[1]);
+});
+slider.noUiSlider.on('change', function (vals) {
+    minYear = vals[0];
+    maxYear = vals[1];
+    initMap(map, Math.floor(vals[0]), Math.floor(vals[1]));
+});
+
+</script>
+
+
+</body>
+</html>
