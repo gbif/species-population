@@ -35,6 +35,21 @@
       <option value="25">25 years</option>
     </select>
     </p>
+    <p>
+    Select the size of the hexagons:
+    <select onchange="updateHexThreshold(this)">
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5" selected>5</option>
+      <option value="6">6</option>
+      <option value="7">7</option>
+      <option value="8">8</option>
+      <option value="9">9</option>
+      <option value="10">10</option>
+      <option value="15">15</option>
+      <option value="25">25</option>
+    </select>
+    </p>
 </div>
 <div class='map-overlay top'>
     <div class='map-overlay-inner'>
@@ -53,13 +68,19 @@ function updateThreshold(select) {
   initMap(map, Math.floor(minYear), Math.floor(maxYear));  
 }
 
+function updateHexThreshold(select) {
+  hexRadius = select.value;
+  initMap(map, Math.floor(minYear), Math.floor(maxYear));  
+}
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiZ2JpZiIsImEiOiJjaW0xeXU1c3gwMG04dm1tNXB3cjJ3Zm12In0.8A2pUP_lgL19w4G5L0fDNw';
 
 var minYear = 1900;
 var maxYear = 2016;
 var yearThreshold = 2; // minimum number of years for which there has to be data
+var hexRadius = 5; // size of the hexagon
 var speciesKey=1958323;
-var regressionLayer = "http://localhost:7001/" + speciesKey + "/{z}/{x}/{y}/points.pbf";
+var regressionLayer = "http://localhost:7001/" + speciesKey + "/{z}/{x}/{y}/hex.pbf";
 var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=4&type=TAXON&key="+speciesKey;
 
 /**
@@ -70,12 +91,12 @@ function initMap(map, minYear, maxYear) {
     if (map.getSource('regression')) map.removeSource('regression');
     if (map.getSource('occurrence')) map.removeSource('occurrence');
     if (map.getLayer('regression-fill-0')) map.removeLayer('regression-fill-0');
-    if (map.getLayer('regression-fill-1')) map.removeLayer('regression-fill-1');
+    if (map.getLayer('regression-fill-hover')) map.removeLayer('regression-fill-hover');
     if (map.getLayer('occurrence-tiles')) map.removeLayer('occurrence-tiles');
 
     map.addSource('regression', {
         type: 'vector',
-        "tiles": [regressionLayer + "?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold]
+        "tiles": [regressionLayer + "?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius]
     });
     map.addSource('occurrence', {
         type: 'raster',
@@ -92,29 +113,28 @@ function initMap(map, minYear, maxYear) {
 
     map.addLayer({
         "id": "regression-fill-0",
-        "type": "circle",
+        "type": "line",
         "source": "regression",
-        "source-layer": "points",
+        "interactive": true,
+        "source-layer": "hex",
         "paint": {
-            "circle-radius": 5,
-            "circle-color": "#0F0",
-            "circle-opacity": 0.5            
-        },
-        "filter": ['>=', "slope", 0]
-        
+          "line-color": "#7b7b7b",
+          "line-width": 0.5,
+          "line-opacity": 1          
+        }                  
     });
+    
     map.addLayer({
-        "id": "regression-fill-1",
-        "type": "circle",
+        "id": "regression-fill-hover",
+        "type": "fill",
         "source": "regression",
-        "source-layer": "points",
+        "source-layer": "hex",
         "paint": {
-            "circle-radius": 5,
-            "circle-color": "#F00",
-            "circle-opacity": 0.5            
+          "fill-color": "#FCA107",
+          "fill-opacity": 0.6          
         },
-        "filter": ['<', "slope", 0]
-    });
+         "filter": ['==', "id", ""]                  
+    });    
 }
 
 /**
@@ -134,13 +154,30 @@ var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/light-v8',
     center: [10, 50],
-    zoom: 3,
+    zoom: 0,
     maxZoom: 8.9
 });
 map.addControl(new mapboxgl.Navigation());
 
 map.on('style.load', function () {
     initMap(map, 1900, 2016);
+});
+
+/**
+ *  Create the hover over effects on mouse moving.
+ */
+map.on('mousemove', function (e) {
+    map.featuresAt(e.point, {
+        radius: 0,
+        layer: 'regression-fill-0'
+    }, function (err, features) {
+        map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
+        if (!err && features.length) {
+            map.setFilter("regression-fill-hover", ["==", "id", features[0].properties.id]);
+        } else {
+            map.setFilter("regression-fill-hover", ["==", "id", ""]);
+        }
+    });
 });
 
 noUiSlider.create(slider, {

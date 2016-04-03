@@ -212,6 +212,14 @@ public class GlobalMercator {
     return new int[] {px%TILE_SIZE, py%TILE_SIZE};
   }
 
+  /**
+   * Returns the X,Y pixel address in global space given the tile local pixel coordinates.
+   * (Added by Tim)
+   */
+  public int[] TileLocalPixelsToGlobal(int px, int py, int x, int y) {
+    return new int[] {x*TILE_SIZE + px, y*TILE_SIZE+y};
+  }
+
 
   /**
    * Returns tile for given mercator coordinates
