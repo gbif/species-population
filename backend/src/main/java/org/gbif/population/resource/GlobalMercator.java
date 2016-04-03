@@ -217,7 +217,7 @@ public class GlobalMercator {
    * (Added by Tim)
    */
   public int[] TileLocalPixelsToGlobal(int px, int py, int x, int y) {
-    return new int[] {x*TILE_SIZE + px, y*TILE_SIZE+y};
+    return new int[] {x*TILE_SIZE + px, y*TILE_SIZE + py};
   }
 
 

@@ -28,7 +28,8 @@
     <p>
     Select the minimum number of years of data required per location to be included:
     <select onchange="updateThreshold(this)">
-      <option value="2">2 years</option>
+      <option value="1">1 year (regression not possible)</option>
+      <option value="2" selected>2 years</option>
       <option value="5">5 years</option>
       <option value="10">10 years</option>
       <option value="10">15 years</option>
@@ -135,6 +136,18 @@ function initMap(map, minYear, maxYear) {
         },
          "filter": ['==', "id", ""]                  
     });    
+    
+    map.addLayer({
+        "id": "regression-fill-label",
+        "type": "symbol",
+        "source": "regression",
+        "source-layer": "hex",
+        "layout": {
+          "text-field": "{id}",
+          "text-size": 8
+        },
+        "filter": ['==', "IGNOREid", ""] 
+    });    
 }
 
 /**
@@ -174,8 +187,22 @@ map.on('mousemove', function (e) {
         map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
         if (!err && features.length) {
             map.setFilter("regression-fill-hover", ["==", "id", features[0].properties.id]);
+            //map.setFilter("regression-fill-label", ["==", "id", features[0].properties.id]);
         } else {
             map.setFilter("regression-fill-hover", ["==", "id", ""]);
+            //map.setFilter("regression-fill-label", ["==", "id", ""]);
+        }
+    });
+});
+
+map.on('click', function (e) {
+    map.featuresAt(e.point, {
+        radius: 0,
+        layer: 'regression-fill-0'
+    }, function (err, features) {
+        map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
+        if (!err && features.length) {
+            //map.setFilter("regression-fill-label", ["==", "id", features[0].properties.id]);
         }
     });
 });

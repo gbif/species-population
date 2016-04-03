@@ -6,6 +6,7 @@ import org.gbif.population.data.PointFeature;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -56,6 +57,7 @@ public final class TileResource {
   private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
   private static final int TILE_SIZE = 256;
   private static final int LARGE_TILE_SIZE = 4096; // big vector tiles
+  private static final int TILE_RATIO = LARGE_TILE_SIZE / TILE_SIZE; // must be exact fit (!)
   private static final Pattern COLON = Pattern.compile(":");
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final GlobalMercator MERCATOR = new GlobalMercator();
@@ -330,7 +332,6 @@ public final class TileResource {
       Coordinate[] coordinates = new Coordinate[7];
       int i=0;
       for(org.codetome.hexameter.core.api.Point point : hexagon.getPoints()) {
-
         coordinates[i++] = new Coordinate(point.getCoordinateX() - offsetX, point.getCoordinateY() - offsetY);
       }
       coordinates[6] = coordinates[0]; // close our polygon
@@ -377,19 +378,68 @@ public final class TileResource {
    * Returns the lat,lng in WGS84 space of the hexagon which is on the tile at z,x,y address.
    */
   private double[] latLngCentreOf(Hexagon hexagon, double offsetX, double offsetY, int z, int x, int y) {
-    // convert to small tile addresses for the mercator utils, noting that the hexagon does not know we offset it
-    // at drawing time, which we compensate for here.
-    int centerX = (int) ((hexagon.getCenterX() / (LARGE_TILE_SIZE/TILE_SIZE)) - offsetX);
-    int centerY = (int) ((hexagon.getCenterY() / (LARGE_TILE_SIZE/TILE_SIZE)) - offsetY);
+    // convert to small tile addresses for the mercator utils
+    int centerX = (int)(hexagon.getCenterX() / TILE_RATIO);
+    int centerY = (int)(hexagon.getCenterY() / TILE_RATIO);
 
     LOG.debug("centers: {},{}", centerX, centerY);
     int[] coords = MERCATOR.TileLocalPixelsToGlobal(centerX, centerY, x, y);
+    // compensate for the offset for where the hexagon was drawn
+    coords[0] = coords[0]+(int)(offsetX/TILE_RATIO);
+    coords[1] = coords[1]+(int)(offsetY/TILE_RATIO);
     LOG.debug("coords: {},{}", coords[0], coords[1]);
     double[] meters = MERCATOR.PixelsToMeters(coords[0], coords[1], z);
     LOG.debug("meters: {},{}", meters[0], meters[1]);
-    // TODO: there is a bug in the above.  For now return B.S.
-    //return MERCATOR.MetersToLatLon(meters[0], meters[1]);
-    return new double[]{centerX, centerY};
+    double[]latLng = MERCATOR.MetersToLatLon(meters[0], meters[1]);
+    LOG.info("latLng: {},{}", roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1]));
+    return new double[]{roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1])};
+    // TODO: The centers returned are not quite correct, but closish.  Explore this!!!
+  }
+
+  // TODO: REMOVE THIs
+  public static void main(String[] args) {
+    /*
+    HexagonalGridBuilder builder = new HexagonalGridBuilder()
+      .setGridWidth(2)
+      .setGridHeight(2)
+      .setGridLayout(HexagonalGridLayout.RECTANGULAR)
+      .setOrientation(HexagonOrientation.FLAT_TOP)
+      .setRadius(512);
+
+    HexagonalGrid grid = builder.build();
+    Observable<Hexagon> hexagons = grid.getHexagons();
+    grid.getHexagons().forEach(new Action1<Hexagon>() {
+      @Override
+      public void call(Hexagon hexagon) {
+        double centerX = hexagon.getCenterX() / TILE_RATIO;
+        double centerY = hexagon.getCenterY() / TILE_RATIO;
+        */
+
+    testrun(0,     0, 0, 0, 1);
+    testrun(128, 128, 0, 0, 1);
+    testrun(255, 255, 0, 0, 1);
+    testrun(0,     0, 1, 1, 1);
+    testrun(128, 128, 1, 1, 1);
+    testrun(255, 255, 1, 1, 1);
+
+      //}
+    //});
+  }
+
+  // TODO: Remove this
+  private static void testrun(double centerX, double centerY, int x, int y, int z) {
+    LOG.info("centers: {},{}", centerX, centerY);
+    int[] coords = MERCATOR.TileLocalPixelsToGlobal((int)centerX, (int)centerY, x, y);
+    LOG.info("coords: {},{}", coords[0], coords[1]);
+    double[] meters = MERCATOR.PixelsToMeters(coords[0], coords[1], z);
+    LOG.info("meters: {},{}", meters[0], meters[1]);
+    double[]latLng = MERCATOR.MetersToLatLon(meters[0], meters[1]);
+    LOG.info("latLng: {},{}", roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1]));
+  }
+
+  private static double roundTwoDecimals(double d) {
+    DecimalFormat twoDForm = new DecimalFormat("#.##");
+    return Double.valueOf(twoDForm.format(d));
   }
 
 
