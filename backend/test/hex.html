@@ -92,6 +92,8 @@ function initMap(map, minYear, maxYear) {
     if (map.getSource('regression')) map.removeSource('regression');
     if (map.getSource('occurrence')) map.removeSource('occurrence');
     if (map.getLayer('regression-fill-0')) map.removeLayer('regression-fill-0');
+    if (map.getLayer('regression-fill-0')) map.removeLayer('regression-fill-1');
+    if (map.getLayer('regression-fill-0')) map.removeLayer('regression-fill-2');
     if (map.getLayer('regression-fill-hover')) map.removeLayer('regression-fill-hover');
     if (map.getLayer('occurrence-tiles')) map.removeLayer('occurrence-tiles');
 
@@ -124,6 +126,32 @@ function initMap(map, minYear, maxYear) {
           "line-opacity": 1          
         }                  
     });
+    
+    map.addLayer({
+        "id": "regression-fill-1",
+        "type": "fill",
+        "source": "regression",
+        "interactive": true,
+        "source-layer": "hex",
+        "paint": {
+          "fill-color": "#0F0",
+          "fill-opacity": 0.5          
+        },
+        "filter": ['>=', "slope", 0]                  
+    });
+    
+    map.addLayer({
+        "id": "regression-fill-2",
+        "type": "fill",
+        "source": "regression",
+        "interactive": true,
+        "source-layer": "hex",
+        "paint": {
+          "fill-color": "#F00",
+          "fill-opacity": 0.5          
+        },
+        "filter": ['<', "slope", 0]                  
+    });        
     
     map.addLayer({
         "id": "regression-fill-hover",

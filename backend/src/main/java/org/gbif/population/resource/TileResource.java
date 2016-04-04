@@ -33,7 +33,9 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
 import no.ecc.vectortile.VectorTileEncoder;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.codetome.hexameter.core.api.DefaultSatelliteData;
 import org.codetome.hexameter.core.api.Hexagon;
+import org.codetome.hexameter.core.api.SatelliteData;
 import org.codetome.hexameter.core.backport.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -323,10 +325,47 @@ public final class TileResource {
         // We need to consider that the hexagons will be offset at rendering time to adjust for tile boundaries.
         Optional<Hexagon> hex = grid.getByPixelCoordinate(tileLocalXY[0] + offsetX, tileLocalXY[1] + offsetY);
         if (hex.isPresent()) {
+          Hexagon hexagon = hex.get();
+
+
+          // store the data on the cell
+          SatelliteData cellData = null;
+          Optional<SatelliteData> cellDataO = hexagon.getSatelliteData();
+          if (!hexagon.getSatelliteData().isPresent()) {
+            cellData = new DefaultSatelliteData();
+            hexagon.setSatelliteData(cellData);
+          } else {
+            cellData = hexagon.getSatelliteData().get();
+          }
+          // ID the hexagon by the latLng of the center to avoid having to faff around with tile boundaries
+          double[] latLng = latLngCentreOf(hexagon,offsetX, offsetY, z,x,y);
+          cellData.addCustomData("id", roundTwoDecimals(latLng[0]) + "," + roundTwoDecimals(latLng[1]));
+          if (!cellData.getCustomData("speciesCounts").isPresent()) {
+            cellData.addCustomData("speciesCounts", feature.getSpeciesCounts());
+          } else {
+            Map<Integer,Integer> existingCounts = (Map<Integer,Integer>)cellData.getCustomData("speciesCounts").get();
+            for (Map.Entry<Integer, Integer> e : feature.getSpeciesCounts().entrySet()) {
+              int value = existingCounts.containsKey(e.getKey()) ?
+                existingCounts.get(e.getKey()) + e.getValue() : e.getValue();
+              existingCounts.put(e.getKey(), value);
+            }
+          }
+          if (!cellData.getCustomData("groupCounts").isPresent()) {
+            cellData.addCustomData("groupCounts", feature.getGroupCounts());
+          } else {
+            Map<Integer,Integer> existingCounts = (Map<Integer,Integer>)cellData.getCustomData("groupCounts").get();
+            for (Map.Entry<Integer, Integer> e : feature.getGroupCounts().entrySet()) {
+              int value = existingCounts.containsKey(e.getKey()) ?
+                existingCounts.get(e.getKey()) + e.getValue() : e.getValue();
+              existingCounts.put(e.getKey(), value);
+            }
+          }
           dataCells.add(hex.get());
         }
       }
     }
+
+
 
     for (Hexagon hexagon : dataCells) {
       Coordinate[] coordinates = new Coordinate[7];
@@ -335,14 +374,33 @@ public final class TileResource {
         coordinates[i++] = new Coordinate(point.getCoordinateX() - offsetX, point.getCoordinateY() - offsetY);
       }
       coordinates[6] = coordinates[0]; // close our polygon
-
       LinearRing linear = GEOMETRY_FACTORY.createLinearRing(coordinates);
       Polygon poly = new Polygon(linear, null, GEOMETRY_FACTORY);
-      Map<String, Object> meta = Maps.newHashMap();
 
-      // ID the hexagon by the latLng of the center to avoid having to faff around with tile boundaries
-      double[] latLng = latLngCentreOf(hexagon,offsetX, offsetY, z,x,y);
-      meta.put("id", roundTwoDecimals(latLng[0]) + "," + roundTwoDecimals(latLng[1]));
+      Map<String, Object> meta = Maps.newHashMap();
+      SatelliteData data = hexagon.getSatelliteData().get(); // must exist
+
+      Map<Integer,Integer> speciesCounts = (Map<Integer,Integer>)data.getCustomData("speciesCounts").get();
+      Map<Integer,Integer> groupCounts = (Map<Integer,Integer>)data.getCustomData("groupCounts").get();
+      SimpleRegression regression = new SimpleRegression();
+      // require 2 points minimum
+      if (speciesCounts.size()>2) {
+        for (Integer year : speciesCounts.keySet()) {
+          double normalizedCount = ((double) speciesCounts.get(year)) /
+                                   groupCounts.get(year);
+          regression.addData(year, normalizedCount);
+        }
+      }
+      meta.put("id", data.getCustomData("id"));
+      meta.put("slope", regression.getSlope());
+      meta.put("intercept", regression.getIntercept());
+      meta.put("significance", regression.getSignificance());
+      meta.put("SSE", regression.getSumSquaredErrors());
+      meta.put("interceptStdErr", regression.getInterceptStdErr());
+      meta.put("meanSquareError", regression.getMeanSquareError());
+      meta.put("slopeStdErr", regression.getSlopeStdErr());
+      meta.put("speciesCounts", speciesCounts);
+      meta.put("groupCounts", groupCounts);
       encoder.addFeature("hex", meta, poly);
     }
 
