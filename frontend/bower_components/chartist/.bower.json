@@ -45,6 +45,5 @@
   },
   "_source": "git://github.com/gionkunz/chartist-js.git",
   "_target": "~0.9.7",
-  "_originalSource": "chartist",
-  "_direct": true
+  "_originalSource": "chartist"
 }

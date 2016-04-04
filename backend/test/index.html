@@ -59,7 +59,7 @@ var minYear = 1900;
 var maxYear = 2016;
 var yearThreshold = 2; // minimum number of years for which there has to be data
 var speciesKey=1958323;
-var regressionLayer = "http://localhost:7001/" + speciesKey + "/{z}/{x}/{y}/points.pbf";
+var regressionLayer = "http://tiletest.gbif.org/" + speciesKey + "/{z}/{x}/{y}/points.pbf";
 var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=4&type=TAXON&key="+speciesKey;
 
 /**

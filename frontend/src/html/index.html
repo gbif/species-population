@@ -25,25 +25,27 @@
 
     <title>GBIF relative abundance</title>
 
-    <!-- style:css -->
-    <link rel="stylesheet" type="text/css" href="/css/index.css">
-    <!-- endinject -->
     <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
     <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.15.0/mapbox-gl.css' rel='stylesheet'/>
     <link href='https://cdnjs.cloudflare.com/ajax/libs/chartist/0.9.7/chartist.min.css' rel='stylesheet'/>
+
+    <!-- style:css -->
+    <link rel="stylesheet" type="text/css" href="/css/index.css">
+    <!-- endinject -->
+
 
 </head>
 <body>
 
 <div id="page-wrapper" class="page-wrapper">
-    <header>
-        <div class="logo"></div>
-        <div class="title">
-            GBIF
-        </div>
-    </header>
+    <!--<header>-->
+        <!--<div class="logo"></div>-->
+        <!--<div class="title">-->
+            <!--GBIF-->
+        <!--</div>-->
+    <!--</header>-->
     <main>
-        <section class="introduction">
+        <!-- <section class="introduction">
             <div>
                 <h1>
                     Relative abundance
@@ -52,60 +54,130 @@
                     GBIF have worked as a central data repository for more than 10 years. We are starting to have so much data that we can olor laoreet quis, maecenas parturient purus dictum. Ante a cursus mi scelerisque pretium, wisi in leo donec.
                 </p>
             </div>
-        </section>
+        </section> -->
         <section class="story" id="story">
             <div class="mapwrapper" id="mapwrapper">
+                <div class='map-overlay top'>
+                    <div class='map-overlay-inner'>
+                        <fieldset>
+                            <label>Year range (<span id="years">1900 - 2016</span>)</label>
+                            <label id='month'></label>
+                            <div id='slider'/>
+                        </fieldset>
+                    </div>
+                </div>
                 <div id='map' class="map"></div>
             </div>
             <div class="storyline">
-                <div class="chapter" id="copenhagen">
-                    <h1>copenhagen</h1>
-                    <div class="ct-chart"></div>
-                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
-                </div>
-                <div class="chapter" id="denmark">
-                    <h1>Denmark</h1>
-                    <div class="ct-chart"></div>
-                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
-                </div>
-                <div class="chapter" id="london">
-                    <h1>london</h1>
-                    <div class="ct-chart"></div>
-                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
-                </div>
-                <div class="chapter" id="woolwich">
-                    <h1>woolwich</h1>
-                    <div class="ct-chart"></div>
-                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
-                </div>
-                <div class="chapter">
-                    <h1> lksjdhf lkjh </h1>
-                    <div class="ct-chart"></div>
-                    <p>slkjdh lskdjhf lksjhd flkjshd f</p>
-                </div>
-            </div>
-        </section>
-        <section class="description">
-            <div>
-                <h2>
-                    Methodology
-                </h2>
+                <!--<div class="chapter" id="copenhagen">-->
+                    <!--<h1>copenhagen</h1>-->
+                    <!--<div class="ct-chart"></div>-->
+                    <!--<p>slkjdh lskdjhf lksjhd flkjshd f</p>-->
+                <!--</div>-->
+                <!--<div class="chapter" id="denmark">-->
+                    <!--<h1>Denmark</h1>-->
+                    <!--<div class="ct-chart"></div>-->
+                    <!--<p>slkjdh lskdjhf lksjhd flkjshd f</p>-->
+                <!--</div>-->
+                <!--<div class="chapter" id="london">-->
+                    <!--<h1>london</h1>-->
+                    <!--<div class="ct-chart"></div>-->
+                    <!--<p>slkjdh lskdjhf lksjhd flkjshd f</p>-->
+                <!--</div>-->
+                <!--<div class="chapter" id="woolwich">-->
+                    <!--<h1>woolwich</h1>-->
+                    <!--<div class="ct-chart"></div>-->
+                    <!--<p>slkjdh lskdjhf lksjhd flkjshd f</p>-->
+                <!--</div>-->
+                <div class="chapter app" id="app">
+                    <h1>Species populations trends</h1>
+                    <p class="description">A pilot to explore if the data supports inference of population trends</p>
+                    <div class="speciesSelector step">
+                        <span class="numbering">1</span>
+                        <p>Select a species</p>
+                        <ul>
+                            <li>
+                                <a>species 1</a>
+                            </li>
+                            <li>
+                                <a>species 2</a>
+                            </li>
+                            <li>
+                                <a>species 3</a>
+                            </li>
+                            <li>
+                                <a>species 4</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="step">
+                        <span class="numbering">2</span>
+                        <p>
+                            Select binning
+                            <select onchange="updateMap(this)" id="mapType">
+                                <option value="points">1km points</option>
+                                <option value="hex" selected>Hexagons</option>
+                            </select>
+                            <span id="hexSizeCtrl">
+                                size
+                                <select onchange="updateHexThreshold(this)" id="hexRadius">
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5" selected>5</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                    <option value="9">9</option>
+                                    <option value="10">10</option>
+                                    <option value="15">15</option>
+                                    <option value="25">25</option>
+                                </select>
+                            </span>
+                        </p>
+                    </div>
+                    <div class="step">
+                        <span class="numbering">3</span>
+                        <p>
+                            Select the minimum number of years of data required per location to be included:
+                            <select onchange="updateYearThreshold(this)" id="yearThreshold">
+                                <option value="1">1 year (regression not possible)</option>
+                                <option value="2">2 years</option>
+                                <option value="5">5 years</option>
+                                <option value="10">10 years</option>
+                                <option value="10">15 years</option>
+                                <option value="25" selected>25 years</option>
+                            </select>
+                        </p>
+                    </div>
 
-                <p>
-                    Lacinia justo eget et quisque, fusce quis suspendisse nec morbi, interdum sollicitudin ornare at arcu. Nostra eu et erat urna et id. Aliquet sapien odio, laoreet interdum et wisi in dignissimos id, volutpat amet, malesuada maecenas parturient mauris primis sem purus, pellentesque sit lorem sem accumsan felis lectus. Ad euismod in vehicula a, nibh lacus lacus aliquam platea, mi quam voluptas platea, dapibus dolor sed wisi ridiculus tortor. Duis suspendisse non sed elit. In orci pellentesque molestie augue, sit nonummy. Suscipit amet. Nibh commodo ante. Maecenas aliquam leo, auctor et facilisis ac ridiculus, lorem libero velit taciti wisi.
-                </p>
-                <p>
-                    Rhoncus sed in et eu in sed, elit dui cras sollicitudin. Ac varius euismod in vestibulum nisl. Id posuere. Nec neque vivamus consequat massa, nonummy nec et risus id sit turpis, pellentesque et ut, vel ullamcorper parturient blandit, vehicula morbi.
-                </p>
-                <p>
-                    Ac in sit nunc congue risus a, leo a, ligula cras per diam lacus, quia mollis orci dui, rutrum vel. Neque vehicula amet nec ligula tellus, ipsum elit laoreet iaculis tellus libero in, sit nec, posuere orci consectetuer voluptate ac. At id quis penatibus, bibendum orci tempor vestibulum porta volutpat, ac in tempor, sed et vel, neque arcu.
-                </p>
+
+                    <div class="ct-chart"></div>
+
+                </div>
             </div>
         </section>
+        <!--<section class="description">-->
+            <!--<div>-->
+                <!--<h2>-->
+                    <!--Methodology-->
+                <!--</h2>-->
+
+                <!--<p>-->
+                    <!--Lacinia justo eget et quisque, fusce quis suspendisse nec morbi, interdum sollicitudin ornare at arcu. Nostra eu et erat urna et id. Aliquet sapien odio, laoreet interdum et wisi in dignissimos id, volutpat amet, malesuada maecenas parturient mauris primis sem purus, pellentesque sit lorem sem accumsan felis lectus. Ad euismod in vehicula a, nibh lacus lacus aliquam platea, mi quam voluptas platea, dapibus dolor sed wisi ridiculus tortor. Duis suspendisse non sed elit. In orci pellentesque molestie augue, sit nonummy. Suscipit amet. Nibh commodo ante. Maecenas aliquam leo, auctor et facilisis ac ridiculus, lorem libero velit taciti wisi.-->
+                <!--</p>-->
+                <!--<p>-->
+                    <!--Rhoncus sed in et eu in sed, elit dui cras sollicitudin. Ac varius euismod in vestibulum nisl. Id posuere. Nec neque vivamus consequat massa, nonummy nec et risus id sit turpis, pellentesque et ut, vel ullamcorper parturient blandit, vehicula morbi.-->
+                <!--</p>-->
+                <!--<p>-->
+                    <!--Ac in sit nunc congue risus a, leo a, ligula cras per diam lacus, quia mollis orci dui, rutrum vel. Neque vehicula amet nec ligula tellus, ipsum elit laoreet iaculis tellus libero in, sit nec, posuere orci consectetuer voluptate ac. At id quis penatibus, bibendum orci tempor vestibulum porta volutpat, ac in tempor, sed et vel, neque arcu.-->
+                <!--</p>-->
+            <!--</div>-->
+        <!--</section>-->
     </main>
 </div>
 
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.3.0/nouislider.min.js"></script>
 <!-- inject:js -->
 <script src="/scripts/regression.min.js"></script>
 <script src="/scripts/jquery.min.js"></script>
@@ -113,7 +185,7 @@
 <script src="/scripts/chartist.min.js"></script>
 <script src="/scripts/chapters.js"></script>
 <script src="/scripts/main.js"></script>
-<script src="/scripts/navigation.js"></script>
+<!--<script src="/scripts/navigation.js"></script>-->
 <!-- endinject -->
 </body>
 </html>

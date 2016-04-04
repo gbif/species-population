@@ -25,15 +25,19 @@ $(window).scroll(function (event) {
 
 })();
 
-
-function changeOccurrenceLayer(tiles) {
+var currentOccurrenceLayer;
+function changeOccurrenceLayer(tiles, key) {
+    if (currentOccurrenceLayer == tiles + key && map.getLayer('occurrence-tiles')) return;
     if (map && map.getLayer('occurrence-tiles')) {
         map.removeLayer('occurrence-tiles');
         map.removeSource('occurrence');
     }
+    currentOccurrenceLayer = tiles + key;
+    if (!tiles || !key) return;
+
     map.addSource('occurrence', {
         type: 'raster',
-        "tiles": [tiles],
+        "tiles": [tiles + key],
         "tileSize": 256
     });
 
@@ -43,6 +47,48 @@ function changeOccurrenceLayer(tiles) {
         "type": "raster",
         "source": "occurrence"
     }, 'statistics');
+}
+
+var currentGeojson;
+function removeGeojson() {
+    if (map.getLayer('geojsonLayer')) {
+        map.removeLayer('geojsonLayer');
+    }
+    if (map.getSource('geojson')) {
+        map.removeSource('geojson');
+    }
+}
+function addGeoJson(geojson) {
+    if (JSON.stringify(currentGeojson) == JSON.stringify(geojson)) return;
+    removeGeojson();
+
+    map.addSource('geojson', {
+        "type": "geojson",
+        "data": geojson
+    });
+
+    map.addLayer({
+        "id": "geojsonLayer",
+        "type": "line",
+        "source": "geojson",
+        "paint": {
+            "line-color": "#0000FF",
+            "line-width": {
+                "base": 1.5,
+                "stops": [
+                    [
+                        5,
+                        0.75
+                    ],
+                    [
+                        18,
+                        32
+                    ]
+                ]
+            }
+        }
+    });
+    // currentGeojson = geojson;
 }
 
 // On every scroll event, check which element is on screen
@@ -57,22 +103,53 @@ $(window).scroll(function() {
     }
 });
 
-var activeChapterName = 'baker';
+var activeChapterName = 'unknown';
 function setActiveChapter(chapterName) {
     if (chapterName === activeChapterName) return;
-
-    changeOccurrenceLayer(chapters[chapterName].occurrences);
-    map.flyTo(chapters[chapterName].location);
-
+    console.log('change chapter');
     $('#' + chapterName).addClass('active');
     $('#' + activeChapterName).removeClass('active');
 
+    var chapter = chapters[chapterName];
+
+    changeOccurrenceLayer(chapter.occurrences, chapter.key);
+    if (!chapter.key || !chapter.grid) {
+        removeStatLayers();
+    }
+    else if (chapter.grid && (!chapters[activeChapterName] || !chapters[activeChapterName].grid || chapters[activeChapterName].key !== chapter.key)) {
+        console.log('set tiles');
+        setStatLayers(chapter.key);
+    }
+
+    //geojson
+    if (chapter.geojson) {
+        addGeoJson(chapter.geojson);
+    } else {
+        removeGeojson();
+    }
+
+    //zoomable
+    if (chapter.scrollZoom === false) {
+        map.scrollZoom.disable();
+    } else {
+        map.scrollZoom.enable();
+    }
+
+    map.flyTo(chapter.location);
+
     activeChapterName = chapterName;
 }
+map.on('style.load', function () {
+    setActiveChapter(activeChapterName);
+});
+
 
 function isElementOnScreen(id) {
     var element = document.getElementById(id);
     var bounds = element.getBoundingClientRect();
     return (bounds.top > 0 || Math.abs(bounds.top)<200 )&& bounds.top < window.innerHeight/2;
 }
+
+
+
 
