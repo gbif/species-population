@@ -9,12 +9,12 @@ var config = {
     clean: path.join(dest, '**/*.*'),
     style: {
         paths: path.join(src, 'style/**/*.styl'),
-        src: [path.join(src, 'style/index.styl')],
+        src: [path.join(src, 'style/index.styl'), './node_modules/mapbox-gl-draw/dist/mapbox-gl-draw.css'],
         dest: path.join(dest, '/css')
     },
     js: {
         paths: [path.join(src, 'js/**/*.js')],
-        src: ['./node_modules/regression/build/regression.min.js', './bower_components/jquery/dist/jquery.min.js', './bower_components/chartist/dist/chartist.min.js', path.join(src, 'js/mapbox-gl_patched_issue2236.js'), path.join(src, 'js/**/*.js')],
+        src: ['./node_modules/mapbox-gl-draw/dist/mapbox-gl-draw.js', './bower_components/jquery/dist/jquery.min.js', './bower_components/chartist/dist/chartist.min.js', path.join(src, 'js/mapbox-gl_patched_issue2236.js'), path.join(src, 'js/**/*.js')],
         dest: path.join(dest, 'scripts')
     },
     html: {

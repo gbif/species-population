@@ -15,3 +15,55 @@ $numberHeight = 25px
 	font-size 12px
 	display block
 }
+
+.specieslist {
+	margin 0
+	padding 0
+	display flex
+	flex-wrap wrap
+	li {
+		flex 1 0 auto
+		position relative
+		display block
+		min-width 200px
+	}
+	img {
+		width 64px
+		height 64px
+		margin-right 10px
+	}
+	p {
+		position absolute
+		top calc(50% - 8px)
+	}
+}
+.media.isActive {
+	font-weight bold
+	color #444
+}
+.media {
+	cursor pointer
+	overflow: hidden;
+	zoom: 1;
+	color #888
+}
+.media>:first-child {
+	float: left;
+	margin-right: 10px;
+}
+.media img {
+	max-width: 64px;
+}
+.media>* {
+	display: inline-block;
+	overflow: hidden;
+}
+.media p {
+	margin: 0;
+	font-size: .9em;
+}
+.media>* {
+	display: inline-block;
+	overflow: hidden;
+}
+

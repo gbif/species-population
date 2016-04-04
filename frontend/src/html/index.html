@@ -31,6 +31,7 @@
 
     <!-- style:css -->
     <link rel="stylesheet" type="text/css" href="/css/index.css">
+    <!--<link rel="stylesheet" type="text/css" href="/css/mapbox-gl-draw.css">-->
     <!-- endinject -->
 
 
@@ -95,18 +96,14 @@
                     <div class="speciesSelector step">
                         <span class="numbering">1</span>
                         <p>Select a species</p>
-                        <ul>
-                            <li>
-                                <a>species 1</a>
+                        <ul class="specieslist">
+                            <li class="media isActive" data-key="1898286">
+                                <img src="http://api.gbif.org/v1/image?url=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fe%2Fe7%2FAdmiral01.jpg&size=s">
+                                <p>Vanessa atalanta</p>
                             </li>
-                            <li>
-                                <a>species 2</a>
-                            </li>
-                            <li>
-                                <a>species 3</a>
-                            </li>
-                            <li>
-                                <a>species 4</a>
+                            <li class="media" data-key="1958323">
+                                <img src="http://api.gbif.org/v1/image?url=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2F4%2F43%2FOurapteryx_sambucaria01..jpg&size=s">
+                                <p>Ourapteryx sambucaria</p>
                             </li>
                         </ul>
                     </div>
@@ -142,10 +139,10 @@
                             <select onchange="updateYearThreshold(this)" id="yearThreshold">
                                 <option value="1">1 year (regression not possible)</option>
                                 <option value="2">2 years</option>
-                                <option value="5">5 years</option>
+                                <option value="5" selected>5 years</option>
                                 <option value="10">10 years</option>
                                 <option value="10">15 years</option>
-                                <option value="25" selected>25 years</option>
+                                <option value="25">25 years</option>
                             </select>
                         </p>
                     </div>
@@ -179,12 +176,14 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.3.0/nouislider.min.js"></script>
 <!-- inject:js -->
-<script src="/scripts/regression.min.js"></script>
 <script src="/scripts/jquery.min.js"></script>
 <script src="/scripts/mapbox-gl_patched_issue2236.js"></script>
+<!--<script src="/scripts/mapbox-gl-draw.js"></script>-->
 <script src="/scripts/chartist.min.js"></script>
 <script src="/scripts/chapters.js"></script>
 <script src="/scripts/main.js"></script>
+<script src="/scripts/app.js"></script>
+
 <!--<script src="/scripts/navigation.js"></script>-->
 <!-- endinject -->
 </body>

@@ -157,8 +157,12 @@ var map = new mapboxgl.Map({
 map.addControl(new mapboxgl.Navigation());
 
 map.on('style.load', function () {
-    initMap(map);
+    $('.media.isActive').trigger('click');
+    //initMap(map);
 });
+
+//var Draw = mapboxgl.Draw();
+//map.addControl(Draw)
 
 
 /**
