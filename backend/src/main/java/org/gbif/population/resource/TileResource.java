@@ -342,7 +342,7 @@ public final class TileResource {
 
       // ID the hexagon by the latLng of the center to avoid having to faff around with tile boundaries
       double[] latLng = latLngCentreOf(hexagon,offsetX, offsetY, z,x,y);
-      meta.put("id", latLng[0] + "," + latLng[1]);
+      meta.put("id", roundTwoDecimals(latLng[0]) + "," + roundTwoDecimals(latLng[1]));
       encoder.addFeature("hex", meta, poly);
     }
 
@@ -385,58 +385,19 @@ public final class TileResource {
     LOG.debug("centers: {},{}", centerX, centerY);
     int[] coords = MERCATOR.TileLocalPixelsToGlobal(centerX, centerY, x, y);
     // compensate for the offset for where the hexagon was drawn
-    coords[0] = coords[0]+(int)(offsetX/TILE_RATIO);
-    coords[1] = coords[1]+(int)(offsetY/TILE_RATIO);
+    coords[0] = coords[0]- (int)(offsetX/TILE_RATIO);
+    coords[1] = coords[1]- (int)(offsetY/TILE_RATIO);
     LOG.debug("coords: {},{}", coords[0], coords[1]);
     double[] meters = MERCATOR.PixelsToMeters(coords[0], coords[1], z);
     LOG.debug("meters: {},{}", meters[0], meters[1]);
     double[]latLng = MERCATOR.MetersToLatLon(meters[0], meters[1]);
     LOG.info("latLng: {},{}", roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1]));
-    return new double[]{roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1])};
-    // TODO: The centers returned are not quite correct, but closish.  Explore this!!!
+    return new double[]{-1 * latLng[0], latLng[1]};
   }
 
-  // TODO: REMOVE THIs
-  public static void main(String[] args) {
-    /*
-    HexagonalGridBuilder builder = new HexagonalGridBuilder()
-      .setGridWidth(2)
-      .setGridHeight(2)
-      .setGridLayout(HexagonalGridLayout.RECTANGULAR)
-      .setOrientation(HexagonOrientation.FLAT_TOP)
-      .setRadius(512);
-
-    HexagonalGrid grid = builder.build();
-    Observable<Hexagon> hexagons = grid.getHexagons();
-    grid.getHexagons().forEach(new Action1<Hexagon>() {
-      @Override
-      public void call(Hexagon hexagon) {
-        double centerX = hexagon.getCenterX() / TILE_RATIO;
-        double centerY = hexagon.getCenterY() / TILE_RATIO;
-        */
-
-    testrun(0,     0, 0, 0, 1);
-    testrun(128, 128, 0, 0, 1);
-    testrun(255, 255, 0, 0, 1);
-    testrun(0,     0, 1, 1, 1);
-    testrun(128, 128, 1, 1, 1);
-    testrun(255, 255, 1, 1, 1);
-
-      //}
-    //});
-  }
-
-  // TODO: Remove this
-  private static void testrun(double centerX, double centerY, int x, int y, int z) {
-    LOG.info("centers: {},{}", centerX, centerY);
-    int[] coords = MERCATOR.TileLocalPixelsToGlobal((int)centerX, (int)centerY, x, y);
-    LOG.info("coords: {},{}", coords[0], coords[1]);
-    double[] meters = MERCATOR.PixelsToMeters(coords[0], coords[1], z);
-    LOG.info("meters: {},{}", meters[0], meters[1]);
-    double[]latLng = MERCATOR.MetersToLatLon(meters[0], meters[1]);
-    LOG.info("latLng: {},{}", roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1]));
-  }
-
+  /**
+   * Rounds to 2 decimal places
+   */
   private static double roundTwoDecimals(double d) {
     DecimalFormat twoDForm = new DecimalFormat("#.##");
     return Double.valueOf(twoDForm.format(d));
