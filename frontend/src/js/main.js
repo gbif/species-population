@@ -1,21 +1,24 @@
 mapboxgl.accessToken = 'pk.eyJ1IjoiZ2JpZiIsImEiOiJjaW0xeXU1c3gwMG04dm1tNXB3cjJ3Zm12In0.8A2pUP_lgL19w4G5L0fDNw';
 
 var gb = {};
-var key = 1898286;
-var minYear = minYear || 1900;
-var maxYear = maxYear || 2015;
+var key;
+var minYear = minYear || 1968;
+var maxYear = maxYear || 2002;
 var mapType = $('#mapType').val();
 var hexRadius = $('#hexRadius').val();
 var yearThreshold = $('#yearThreshold').val();
-
+var lastClickedPoint;
 
 /**
  * Initialises the map, taking the year slider into consideration.
  */
 function initMap(map) {
+    $('.charts').hide();
     removeStatLayers();
     setStatLayers(key, mapType, hexRadius, yearThreshold);
+    if (lastClickedPoint) setTimeout(function(){selectFeatureAtPoint(lastClickedPoint)}, 500);
 }
+
 
 function removeStatLayers() {
     for (var i = 0; i < 11; i++) {
@@ -57,6 +60,7 @@ function setStatLayers(key, type, hexRadius, yearThreshold) {
     };
     var paint = layerType == 'fill' ? paintFill : paintCircle;
 
+    //var regressionTiles = 'http://trobertson:7001/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
     var regressionTiles = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
     map.addSource('regression', {
         type: 'vector',
@@ -161,14 +165,35 @@ map.on('style.load', function () {
     //initMap(map);
 });
 
-//var Draw = mapboxgl.Draw();
-//map.addControl(Draw)
+
 
 
 /**
  * Set up the details when a user clicks a cell.
  */
 map.on('click', function (e) {
+    lastClickedPoint = e;
+    selectFeatureAtPoint(lastClickedPoint);
+    //map.featuresAt(e.point, {
+    //    radius: 3,
+    //    includeGeometry: true,
+    //    layer: 'regression'
+    //}, function (err, features) {
+    //
+    //    if (err || !features.length) {
+    //        return;
+    //    }
+    //
+    //    //normalize
+    //    var data = features[0].properties;
+    //    showStats(data);
+    //});
+});
+
+/**
+ *  Create the hover over effects on mouse moving.
+ */
+function selectFeatureAtPoint(e) {
     map.featuresAt(e.point, {
         radius: 3,
         includeGeometry: true,
@@ -183,11 +208,7 @@ map.on('click', function (e) {
         var data = features[0].properties;
         showStats(data);
     });
-});
-
-/**
- *  Create the hover over effects on mouse moving.
- */
+}
 map.on('mousemove', function (e) {
     if (!map.getLayer('regression-fill-hover')) return;
     map.featuresAt(e.point, {
@@ -217,15 +238,23 @@ function showStats(data) {
     var points = [];
     var normalized = [];
     var line = [];
+
+    var speciesCounts = typeof data.speciesCounts === 'string' ? JSON.parse(data.speciesCounts) : data.speciesCounts;
+    var groupCounts = typeof data.groupCounts === 'string' ? JSON.parse(data.groupCounts) : data.groupCounts;
+
     for (var i = minYear; i < maxYear; i++) {
         labels.push(i);
-        //if (data.hasOwnProperty('' + i)) {
-        //    var s = parseInt(data[i]);
-        //    var g = parseInt(data[i + '_group']);
-        //    var val = s/g;
-        //    normalized.push([i, val]);
-        //    points.push(val);
-        //}
+        //points.push(Math.random());
+        if (speciesCounts.hasOwnProperty(i.toString())) {
+            var s = speciesCounts[i];
+            var g = groupCounts[i];
+            var val = s/g;
+            normalized.push([i, val]);
+            points.push(val);
+        }
+        else {
+            points.push(null);
+        }
         line.push( data.slope*i + data.intercept );
     }
 
@@ -235,13 +264,15 @@ function showStats(data) {
     var chart = new Chartist.Line('.ct-chart', {
         labels: labels,
         // Naming the series with the series object array notation
-        series: [{
-            name: 'line',
-            data: line
-        }, {
-            name: 'points',
-            data: points
-        }
+        series: [
+            {
+                name: 'points',
+                data: points
+            },
+            {
+                name: 'line',
+                data: line
+            }
         ]
     }, {
         fullWidth: true,
@@ -265,13 +296,37 @@ function showStats(data) {
                 showArea: false,
                 showPoint: true
             }
-        }
+        },
+        plugins: [
+            Chartist.plugins.tooltip({
+            })
+        ]
     });
+
+    $('.charts').show();
+    $('#stats').show();
+
+
+    $('#slope span').html(data.slope);
+
+    if (line.length > 1) {
+        var estChange = Math.round(100*line[line.length-1]/line[0]);
+        $('#estChange span').html(estChange + '%');
+        $('#estChange span').show();
+    } else {
+        $('#estChange span').hide();
+    }
+
+
+    $('#interceptStdErr span').html(data.interceptStdErr);
+    $('#meanSquareError span').html(data.meanSquareError);
+    $('#significance span').html(data.significance);
+    $('#slopeStdErr span').html(data.slopeStdErr);
 }
 
 
 noUiSlider.create(slider, {
-    start: [1900, 2016],
+    start: [minYear, maxYear],
     step: 1,
     connect: true,
     range: {

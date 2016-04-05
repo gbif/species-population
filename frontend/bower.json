@@ -21,6 +21,7 @@
   ],
   "dependencies": {
     "chartist": "~0.9.7",
-    "jquery": "~2.2.2"
+    "jquery": "~2.2.2",
+    "chartist-plugin-tooltip": "~0.0.12"
   }
 }

@@ -5,12 +5,14 @@ $numberHeight = 25px
 .numbering {
 	position absolute
 	left -40px
-	top -5px
-	border 1px solid #444
+	top -2px
+	border 1px solid #bbb
+	//background #eee
+	color #bbb
 	border-radius 50%
 	width $numberHeight
 	height $numberHeight
-	line-height $numberHeight
+	line-height 2
 	text-align center
 	font-size 12px
 	display block
@@ -25,7 +27,8 @@ $numberHeight = 25px
 		flex 1 0 auto
 		position relative
 		display block
-		min-width 200px
+		min-width 50%
+		margin 2px
 	}
 	img {
 		width 64px
@@ -33,17 +36,23 @@ $numberHeight = 25px
 		margin-right 10px
 	}
 	p {
-		position absolute
-		top calc(50% - 8px)
+		//position absolute
+		//top calc(50% - 8px)
+		padding-top 10px
+		display block
+		&:nth-of-type(2) {
+			font-style italic
+			color #b5b5b5
+		}
 	}
 }
 .media.isActive {
-	font-weight bold
+	//font-weight bold
 	color #444
+	background #eee
 }
 .media {
 	cursor pointer
-	overflow: hidden;
 	zoom: 1;
 	color #888
 }
@@ -52,18 +61,54 @@ $numberHeight = 25px
 	margin-right: 10px;
 }
 .media img {
-	max-width: 64px;
+	max-width 64px
+	background #eee
+	border none
 }
 .media>* {
 	display: inline-block;
-	overflow: hidden;
 }
 .media p {
 	margin: 0;
 	font-size: .9em;
 }
-.media>* {
-	display: inline-block;
-	overflow: hidden;
+
+
+
+#speciesTypeahead {
+	> p {
+		display inline-block
+		width calc(100% - 20px - 64px)
+		>span, >span>span {
+			display inline-block
+			width 100%
+		}
+	}
+}
+.typeahead, .typeahead:focus {
+	outline none
+	border 1px solid #eaeaea
+	padding 5px 10px
+	font-size 0.9em
+	width calc(100% - 20px)
 }
 
+.tt-menu {
+	background-color white
+	border 1px solid #ddd
+	box-shadow 1px 1px rgba(0,0,0,0.1)
+	width calc(100% - 20px)
+	.tt-suggestion {
+		padding 2px 5px
+		border-bottom 1px solid #ddd
+		&.tt-cursor {
+			background-color #ddd
+		}
+	}
+}
+
+.filterDescr {
+	>div {
+		display inline-block
+	}
+}

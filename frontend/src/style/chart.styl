@@ -1,7 +1,35 @@
-.ct-series-a .ct-line {
+.ct-series-b .ct-line {
 	stroke #555
 }
 
 .ct-line {
 	stroke-width 2px
+}
+
+.ct-series-a .ct-point {
+	stroke #C38789
+}
+
+.ct-point{
+	stroke-width 5px
+	stroke-linecap round
+	transition all 0.2s linear
+}
+.ct-point:hover{
+	stroke-width 10px
+	stroke tomato
+}
+.chartist-tooltip {
+	position absolute
+	background #888
+	color #eee
+	padding 10px
+}
+
+#stats {
+	display none
+	font-size 12px
+	>p {
+		margin-top 0
+	}
 }
