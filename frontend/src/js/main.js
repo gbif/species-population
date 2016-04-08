@@ -21,11 +21,12 @@ function initMap(map) {
 
 
 function removeStatLayers() {
+    //console.log('remove layers');
     for (var i = 0; i < 11; i++) {
         if (map.getLayer('regression-' + i)) map.removeLayer('regression-' + i);
     }
-    if (map.getSource('regression')) map.removeSource('regression');
     if (map.getLayer('regression-fill-hover')) map.removeLayer('regression-fill-hover');
+    if (map.getSource('regression')) map.removeSource('regression');
 }
 function setStatLayers(key, type, hexRadius, yearThreshold) {
     removeStatLayers();
@@ -60,12 +61,13 @@ function setStatLayers(key, type, hexRadius, yearThreshold) {
     };
     var paint = layerType == 'fill' ? paintFill : paintCircle;
 
-    //var regressionTiles = 'http://trobertson:7001/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
-    var regressionTiles = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
+    //var regressionTiles = 'http://trobertson:7001/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
+    var regressionTiles = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
     map.addSource('regression', {
         type: 'vector',
         "tiles": [regressionTiles]
     });
+
 
     if (layerType == 'fill') {
         map.addLayer({
@@ -162,7 +164,6 @@ map.addControl(new mapboxgl.Navigation());
 
 map.on('style.load', function () {
     $('.media.isActive').trigger('click');
-    //initMap(map);
 });
 
 
@@ -174,26 +175,13 @@ map.on('style.load', function () {
 map.on('click', function (e) {
     lastClickedPoint = e;
     selectFeatureAtPoint(lastClickedPoint);
-    //map.featuresAt(e.point, {
-    //    radius: 3,
-    //    includeGeometry: true,
-    //    layer: 'regression'
-    //}, function (err, features) {
-    //
-    //    if (err || !features.length) {
-    //        return;
-    //    }
-    //
-    //    //normalize
-    //    var data = features[0].properties;
-    //    showStats(data);
-    //});
 });
 
 /**
  *  Create the hover over effects on mouse moving.
  */
 function selectFeatureAtPoint(e) {
+    if (!map.getLayer('regression')) return;
     map.featuresAt(e.point, {
         radius: 3,
         includeGeometry: true,

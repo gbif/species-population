@@ -13,13 +13,13 @@ $(window).scroll(function (event) {
         $('#mapwrapper').removeClass('sticky');
     }
 
-    var nextPos = afterStoryEl.getBoundingClientRect().top;
-    if (nextPos < 0) {
-        $('#mapwrapper').removeClass('sticky');
-        $('#mapwrapper').addClass('bottom');
-    } else {
-        $('#mapwrapper').removeClass('bottom');
-    }
+    //var nextPos = afterStoryEl.getBoundingClientRect().top;
+    //if (nextPos < 0) {
+    //    $('#mapwrapper').removeClass('sticky');
+    //    $('#mapwrapper').addClass('bottom');
+    //} else {
+    //    $('#mapwrapper').removeClass('bottom');
+    //}
 });
 
 
@@ -46,7 +46,7 @@ function changeOccurrenceLayer(tiles, key) {
         "id": "occurrence-tiles",
         "type": "raster",
         "source": "occurrence"
-    }, 'statistics');
+    }, 'regression');
 }
 
 var currentGeojson;
@@ -105,6 +105,7 @@ $(window).scroll(function() {
 
 var activeChapterName = 'unknown';
 function setActiveChapter(chapterName) {
+
     if (chapterName === activeChapterName) return;
     console.log('change chapter');
     $('#' + chapterName).addClass('active');
@@ -112,13 +113,13 @@ function setActiveChapter(chapterName) {
 
     var chapter = chapters[chapterName];
 
-    changeOccurrenceLayer(chapter.occurrences, chapter.key);
+    //changeOccurrenceLayer(chapter.occurrences, chapter.key);
     if (!chapter.key || !chapter.grid) {
         removeStatLayers();
     }
     else if (chapter.grid && (!chapters[activeChapterName] || !chapters[activeChapterName].grid || chapters[activeChapterName].key !== chapter.key)) {
         console.log('set tiles');
-        setStatLayers(chapter.key);
+        //setStatLayers(chapter.key);
     }
 
     //geojson

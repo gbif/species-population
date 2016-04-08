@@ -22,29 +22,31 @@ var chapters = {
         grid: true,
         geojson: sampleAreaGeojson
     },
-    'denmark': {
-        location: {
-            duration: 1000,
-            center: [12.59, 55.67],
-            zoom: 3
-        },
-        scrollZoom: false,
-        key: 797,
-        occurrences: "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=2&type=TAXON&key=",
-        geojson: sampleAreaGeojson
-    },
-    'london': {
-        location: {
-            center: [-0.08533793, 51.50438536],
-            zoom: 2,
-            speed: 0.6
-        },
-        scrollZoom: false,
-    },
-    'woolwich': {
+    //'denmark': {
+    //    location: {
+    //        duration: 1000,
+    //        center: [12.59, 55.67],
+    //        zoom: 3
+    //    },
+    //    scrollZoom: false,
+    //    key: 797,
+    //    occurrences: "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=2&type=TAXON&key=",
+    //    geojson: sampleAreaGeojson
+    //},
+    //'london': {
+    //    location: {
+    //        center: [-0.08533793, 51.50438536],
+    //        zoom: 2,
+    //        speed: 0.6
+    //    },
+    //    scrollZoom: false
+    //},
+    'app': {
         location: {
             center: [0.05991101, 51.48752939],
             zoom: 4
-        }
+        },
+        scrollZoom: true,
+        grid: true
     }
 };
