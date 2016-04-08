@@ -8,12 +8,12 @@ import com.google.common.collect.Maps;
 public class PointFeature {
   private final double latitude;
   private final double longitude;
-  private final Map<Integer, Integer> speciesCounts = Maps.newHashMap();
-  private final Map<Integer, Integer> groupCounts = Maps.newHashMap();
+  private final Map<String, Integer> yearCounts;
 
-  public PointFeature(double latitude, double longitude) {
+  public PointFeature(double latitude, double longitude, Map<String, Integer> yearCounts) {
     this.latitude = latitude;
     this.longitude = longitude;
+    this.yearCounts = yearCounts;
   }
 
   public double getLatitude() {
@@ -24,13 +24,10 @@ public class PointFeature {
     return longitude;
   }
 
-  public Map<Integer, Integer> getGroupCounts() {
-    return groupCounts;
+  public Map<String, Integer> getYearCounts() {
+    return yearCounts;
   }
 
-  public Map<Integer, Integer> getSpeciesCounts() {
-    return speciesCounts;
-  }
 
   @Override
   public boolean equals(Object o) {
@@ -41,13 +38,12 @@ public class PointFeature {
 
     return Objects.equal(this.latitude, that.latitude) &&
            Objects.equal(this.longitude, that.longitude) &&
-           Objects.equal(this.speciesCounts, that.speciesCounts) &&
-           Objects.equal(this.groupCounts, that.groupCounts);
+           Objects.equal(this.yearCounts, that.yearCounts);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hashCode(latitude, longitude, speciesCounts, groupCounts);
+    return Objects.hashCode(latitude, longitude, yearCounts);
   }
 
   @Override
@@ -55,8 +51,7 @@ public class PointFeature {
     return Objects.toStringHelper(this)
                   .add("latitude", latitude)
                   .add("longitude", longitude)
-                  .add("speciesCounts", speciesCounts)
-                  .add("groupCounts", groupCounts)
+                  .add("yearCounts", yearCounts)
                   .toString();
   }
 }

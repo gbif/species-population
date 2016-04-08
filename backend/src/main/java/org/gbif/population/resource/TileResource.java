@@ -2,16 +2,21 @@ package org.gbif.population.resource;
 
 
 import org.gbif.population.data.DataDAO;
+import org.gbif.population.data.DataService;
 import org.gbif.population.data.PointFeature;
+import org.gbif.population.data.ScientificName;
+import org.gbif.population.data.YearFeature;
 
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -23,6 +28,8 @@ import javax.ws.rs.core.Context;
 
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -60,132 +67,17 @@ public final class TileResource {
   private static final int TILE_SIZE = 256;
   private static final int LARGE_TILE_SIZE = 4096; // big vector tiles
   private static final int TILE_RATIO = LARGE_TILE_SIZE / TILE_SIZE; // must be exact fit (!)
+  private static final Pattern COMMA = Pattern.compile(",");
   private static final Pattern COLON = Pattern.compile(":");
   private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final GlobalMercator MERCATOR = new GlobalMercator();
-  private final DataDAO dataDao;
+  private final DataService dataService;
+
+  //private Map<Point2D, Map<String, Integer>> groupFeatures;
 
 
-  public TileResource(DataDAO dataDao) {
-    this.dataDao = dataDao;
-  }
-
-  @GET
-  @Path("{speciesKey}/{z}/{x}/{y}.pbf")
-  @Timed
-  @Produces("application/x-protobuf")
-  public byte[] tile(
-    @PathParam("z") int z, @PathParam("x") int x, @PathParam("y") int y, @PathParam("speciesKey") String speciesKey,
-    @QueryParam("minYear") Integer minYear, @QueryParam("maxYear") Integer maxYear,
-    @Context HttpServletResponse response
-  ) throws IOException {
-
-    // open the tiles to the world (especially your friendly localhost developer!)
-    response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
-    response.addHeader("Access-Control-Allow-Origin", "*");
-
-    int minYearAsInt = minYear == null ? 1900 : minYear;
-    int maxYearAsInt = maxYear == null ? 2020 : maxYear; // if this runs longer than 2020, it'd be a miracle
-
-    String json = dataDao.lookup(speciesKey, z, x, y);
-
-    // cellID:{year:count}
-    Map<String, Map<String,String>> features = Maps.newHashMap();
-    if (json != null) {
-
-      // TODO refactor this mess
-      String groupJSON = dataDao.lookup("797", z, x, y);
-      Map<String,Map<String,Integer>> groupYearLookup = MAPPER.readValue(groupJSON, Map.class);
-
-
-      // year:{cellID:count}
-      Map<String,Map<String,Integer>> years = MAPPER.readValue(json, Map.class);
-      for (Map.Entry<String, Map<String,Integer>> year : years.entrySet() ) {
-        int yearAsInt = Integer.parseInt(year.getKey());
-        // only include the years of interest
-        if (yearAsInt >= minYearAsInt && yearAsInt<=maxYearAsInt) {
-          // {cellID:count}
-          for (Map.Entry<String, Integer> cellCounts : year.getValue().entrySet()) {
-            Map<String, String> yearCount = features.get(cellCounts.getKey());
-            if (yearCount == null) {
-              yearCount = Maps.newHashMap();
-              // add a new feature keyed on the cellID
-              features.put(cellCounts.getKey(), yearCount);
-            }
-            yearCount.put(year.getKey(),String.valueOf(cellCounts.getValue()));
-
-            // now add the count for the group
-            Integer groupCountForYearCell = groupYearLookup.get(year.getKey()).get(cellCounts.getKey());
-            yearCount.put(year.getKey()+"_group", String.valueOf(groupCountForYearCell));
-          }
-        }
-      }
-    }
-
-    VectorTileEncoder encoder = new VectorTileEncoder(TILE_SIZE, 0, true);
-    int zoomAhead = 3; // defined by the processing
-    int cellSize = TILE_SIZE / (1 << zoomAhead);
-    int cellsPerTile = TILE_SIZE / cellSize;
-
-    // cellID:{year:count}
-    for (Map.Entry<String, Map<String,String>> feature : features.entrySet()) {
-
-      int[] cell = parseCellID(feature.getKey()); // x,y
-
-      // grids are always addressed from world 0,0 so remove the offsets to reference from 0,0 on the tile itself
-      int x1 = cell[0] - x * cellsPerTile;
-      int y1 = cell[1] - y * cellsPerTile;
-
-      // now project them onto the grid instead of pixels
-      int left = x1 * cellSize;
-      int top = y1 * cellSize;
-
-      Coordinate[] coordinates = {
-        new Coordinate(left, top),
-        new Coordinate(left + cellSize, top),
-        new Coordinate(left + cellSize, top + cellSize),
-        new Coordinate(left, top + cellSize),
-        new Coordinate(left, top)
-      };
-      LinearRing linear = GEOMETRY_FACTORY.createLinearRing(coordinates);
-      Polygon poly = new Polygon(linear, null, GEOMETRY_FACTORY);
-
-      Map<String, Object> meta = Maps.newHashMap();
-      meta.put("id", z + "/" + x + "/" + y + "/" + cell[0] + "/" + cell[1]);
-      meta.putAll(feature.getValue());
-
-      // TODO: refactor
-      Map<String,String> points = feature.getValue();
-      SimpleRegression regression = new SimpleRegression();
-      LOG.debug("points {}", points);
-      // require 3 points
-      if (points.size()>6) {
-        for (Map.Entry<String, String> e : points.entrySet()) {
-          if (!e.getKey().endsWith("_group")) {
-            int speciesValue = Integer.parseInt(e.getValue());
-            int groupValue = Integer.parseInt(points.get(e.getKey() + "_group"));
-            double normalizedCount = ((double) speciesValue) / groupValue;
-            double yearAsDouble = Double.parseDouble(e.getKey());
-            LOG.debug("Adding {}:{}", yearAsDouble, normalizedCount);
-            regression.addData(yearAsDouble, normalizedCount);
-          }
-        }
-      }
-      meta.put("m", String.valueOf(regression.getSlope()));
-      meta.put("m2", regression.getSlope());
-      meta.put("c", String.valueOf(regression.getIntercept()));
-      meta.put("significance", String.valueOf(regression.getSignificance()));
-      meta.put("SSE", String.valueOf(regression.getSumSquaredErrors()));
-
-      encoder.addFeature("statistics", meta, poly);
-
-    }
-    return encoder.encode();
-  }
-
-  private static int[] parseCellID(String cellID) {
-    String[] atoms = COLON.split(cellID);
-    return new int[]{Integer.parseInt(atoms[0]), Integer.parseInt(atoms[1])};
+  public TileResource(DataService dataService) {
+    this.dataService = dataService;
   }
 
   /**
@@ -196,61 +88,137 @@ public final class TileResource {
   @Timed
   @Produces("application/x-protobuf")
   public byte[] points(
-    @PathParam("z") int z, @PathParam("x") int x, @PathParam("y") int y, @PathParam("speciesKey") String speciesKey,
-    @QueryParam("minYear") Integer minYear, @QueryParam("maxYear") Integer maxYear,
-    @QueryParam("yearThreshold") Integer yearThreshold, @Context HttpServletResponse response
+    @PathParam("z") int z, @PathParam("x") int x, @PathParam("y") int y, @PathParam("speciesKey") int speciesKey,
+    @QueryParam("minYear") int minYear, @QueryParam("maxYear") int maxYear,
+    @QueryParam("yearThreshold") final int yearThreshold, @Context HttpServletResponse response
   ) throws IOException {
-
     // open the tiles to the world
     response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
     response.addHeader("Access-Control-Allow-Origin", "*");
 
-    int minYearAsInt = minYear == null ? 1900 : minYear;
-    int maxYearAsInt = maxYear == null ? 2020 : maxYear; // if this runs longer than 2020, it'd be a miracle
-    int yearThresholdAsInt = yearThreshold == null ? 2 : yearThreshold; // sensible default - 2 points for regression
+    List<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, yearThreshold);
+    if (!speciesFeatures.isEmpty()) {
+      Map<Point2D, Map<String, Integer>> groupFeatures = getIndexedGroupFeatures(minYear, maxYear);
+      LOG.info("Found {} features in total for the group", groupFeatures.size());
 
+      VectorTileEncoder encoder = new VectorTileEncoder(TILE_SIZE, 0, false);
 
-    List<PointFeature> features = dataDao.getRecords(speciesKey, minYearAsInt, maxYearAsInt, yearThresholdAsInt);
-    LOG.debug("Found {} features", features.size());
-    VectorTileEncoder encoder = new VectorTileEncoder(TILE_SIZE, 0, true);
+      for (PointFeature feature : speciesFeatures) {
 
-    for (PointFeature feature : features) {
-      // is the feature on the tile we are painting?
-      int[] tileXY = MERCATOR.GoogleTile(feature.getLatitude(), feature.getLongitude(), z);
-      if (tileXY[0] == x && tileXY[1] == y) {
+        MercatorProjection.
 
-        // find the pixel offsets local to the top left of the tile
-        int[] tileLocalXY = getTileLocalCoordinates(z, feature);
+        // is the feature on the tile we are painting?
+        java.awt.Point tileAddress = MercatorProjectionUtils.toTileXY(feature.getLatitude(), feature.getLongitude(), z);
+        if (tileAddress.getX() == x && tileAddress.getY() == y) {
 
-        Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(tileLocalXY[0], tileLocalXY[1]));
-        Map<String, Object> meta = Maps.newHashMap();
+          // find the pixel offsets local to the top left of the tile
+          int[] tileLocalXY = getTileLocalCoordinates(z, feature);
 
-        SimpleRegression regression = new SimpleRegression();
-        // require 2 points minimum
-        if (feature.getSpeciesCounts().size()>2) {
-          for (Integer year : feature.getSpeciesCounts().keySet()) {
-            double normalizedCount = ((double) feature.getSpeciesCounts().get(year)) /
-                                     feature.getGroupCounts().get(year);
-              regression.addData(year, normalizedCount);
+          Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(tileLocalXY[0], tileLocalXY[1]));
+          Map<String, Object> meta = Maps.newHashMap();
+          Map<String, Integer> groupYearCounts = groupFeatures.get(new Point2D.Double(feature.getLongitude(), feature.getLatitude()));
+          // infer absence
+          for (String year : groupYearCounts.keySet()) {
+            if (!feature.getYearCounts().containsKey(year)) {
+              feature.getYearCounts().put(year, 0);
+            }
           }
-        }
-        meta.put("slope", regression.getSlope());
-        meta.put("intercept", regression.getIntercept());
-        meta.put("significance", regression.getSignificance());
-        meta.put("SSE", regression.getSumSquaredErrors());
-        meta.put("interceptStdErr", regression.getInterceptStdErr());
-        meta.put("meanSquareError", regression.getMeanSquareError());
-        meta.put("slopeStdErr", regression.getSlopeStdErr());
-        meta.put("speciesCounts", feature.getSpeciesCounts());
-        meta.put("groupCounts", feature.getGroupCounts());
-        encoder.addFeature("points", meta, point);
 
-      } else {
-        LOG.debug("{},{} falls on {},{} at zoom", feature.getLatitude(), feature.getLongitude(), tileXY[0],tileXY[1], z);
+          SimpleRegression regression = new SimpleRegression();
+          // regression require 2 points minimum
+          if (feature.getYearCounts().size()>2) {
+            for (String year : feature.getYearCounts().keySet()) {
+              double speciesCount = feature.getYearCounts().get(year);
+              double groupCount = groupFeatures.get(new Point2D.Double(feature.getLongitude(),
+                                                                       feature.getLatitude())).get(year);
+              double normalizedCount = speciesCount / groupCount;
+              regression.addData(Double.valueOf(year), normalizedCount);
+            }
+          }
+
+          meta.put("slope", regression.getSlope());
+          meta.put("intercept", regression.getIntercept());
+          meta.put("significance", regression.getSignificance());
+          meta.put("SSE", regression.getSumSquaredErrors());
+          meta.put("interceptStdErr", regression.getInterceptStdErr());
+          meta.put("meanSquareError", regression.getMeanSquareError());
+          meta.put("slopeStdErr", regression.getSlopeStdErr());
+          meta.put("groupCounts", MAPPER.writeValueAsString(groupYearCounts));
+          meta.put("speciesCounts", MAPPER.writeValueAsString(feature.getYearCounts()));
+          encoder.addFeature("points", meta, point);
+        }
       }
+      return encoder.encode();
     }
-    return encoder.encode();
+    return null; // not enough data
   }
+
+  /**
+   * Returns the features for the group, indexed by the geometery.
+   */
+  private Map<Point2D, Map<String, Integer>> getIndexedGroupFeatures(int minYear,int maxYear) {
+    Map<Point2D, Map<String, Integer>> groupFeatures = Maps.newHashMap();
+    List<PointFeature> group = dataService.getGroupFeatures(minYear, maxYear);
+    for (PointFeature f : group) {
+      groupFeatures.put(new Point2D.Double(f.getLongitude(), f.getLatitude()), f.getYearCounts());
+    }
+    return groupFeatures;
+  }
+
+  @GET
+  @Path("/autocomplete")
+  @Timed
+  @Produces("application/json")
+  public List<ScientificName> autocomplete(@QueryParam("prefix") String prefix, @Context HttpServletResponse response) {
+    response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
+    response.addHeader("Access-Control-Allow-Origin", "*");
+
+    String queryParam = prefix.endsWith("%") ? prefix : prefix + "%";
+    return dataService.autocomplete(queryParam);
+  }
+
+  /**
+   * Perfroms an ad hoc regression based on the input parameters.
+   */
+  @GET
+  @Path("{speciesKey}/regression.json")
+  @Timed
+  @Produces("application/json")
+  public Map<String, Object> adhocRegression(
+    @PathParam("speciesKey") String speciesKey, @QueryParam("minYear") int minYear, @QueryParam("maxYear") int maxYear,
+    @QueryParam("yearThreshold") int yearThreshold, @QueryParam("minLat") double minLatitude, @QueryParam("maxLat") double maxLatitude,
+    @QueryParam("minLng") double minLongitude, @QueryParam("maxLng") double maxLongitude, @Context HttpServletResponse response
+  ) throws IOException {
+    // open the tiles to the world
+    response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
+    response.addHeader("Access-Control-Allow-Origin", "*");
+
+    List<YearFeature> features = null; //dataDao.getRecords(speciesKey, minYear, maxYear, yearThreshold,
+                                         //           minLatitude, maxLatitude, minLongitude, maxLongitude);
+    SimpleRegression regression = new SimpleRegression();
+    Map<String, Integer> speciesCounts = Maps.newHashMap();
+    Map<String, Integer> groupCounts = Maps.newHashMap();
+    LOG.info("Found {} years with data", features.size());
+    for (YearFeature feature : features) {
+      regression.addData((double)feature.getYear(), ((double)feature.getSpeciesCount()) / feature.getGroupCount());
+      speciesCounts.put(String.valueOf(feature.getYear()), feature.getSpeciesCount());
+      groupCounts.put(String.valueOf(feature.getYear()), feature.getGroupCount());
+    }
+    Map<String, Object> data = Maps.newHashMap();
+    data.put("slope", regression.getSlope());
+    data.put("intercept", regression.getIntercept());
+    data.put("significance", regression.getSignificance());
+    data.put("SSE", regression.getSumSquaredErrors());
+    data.put("interceptStdErr", regression.getInterceptStdErr());
+    data.put("meanSquareError", regression.getMeanSquareError());
+    data.put("slopeStdErr", regression.getSlopeStdErr());
+    data.put("speciesCounts", speciesCounts);
+    data.put("groupCounts", groupCounts);
+    LOG.info("Result {}", data);
+    return data;
+  }
+
+
 
   /**
    * Returns the data as hex grids.
@@ -260,8 +228,8 @@ public final class TileResource {
   @Timed
   @Produces("application/x-protobuf")
   public byte[] hex(
-    @PathParam("z") final int z, @PathParam("x") final int x, @PathParam("y") final int y, @PathParam("speciesKey") String speciesKey,
-    @QueryParam("minYear") Integer minYear, @QueryParam("maxYear") Integer maxYear,
+    @PathParam("z") final int z, @PathParam("x") final int x, @PathParam("y") final int y, @PathParam("speciesKey") int speciesKey,
+    @QueryParam("minYear") int minYear, @QueryParam("maxYear") int maxYear,
     @QueryParam("yearThreshold") Integer yearThreshold, @QueryParam("radius") Integer hexRadius, @Context HttpServletResponse response
   ) throws IOException {
 
@@ -269,167 +237,180 @@ public final class TileResource {
     response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
     response.addHeader("Access-Control-Allow-Origin", "*");
 
-    int minYearAsInt = minYear == null ? 1900 : minYear;
-    int maxYearAsInt = maxYear == null ? 2020 : maxYear; // if this runs longer than 2020, it'd be a miracle
-    int yearThresholdAsInt = yearThreshold == null ? 2 : yearThreshold; // sensible default - 2 points for regression
-    List<PointFeature> features = dataDao.getRecords(speciesKey, minYearAsInt, maxYearAsInt, yearThresholdAsInt);
-    LOG.debug("Found {} features", features.size());
+    // we always search for all data regardless of the threshold supplied, but then filter out afterwards
+    List<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, 0);
+    LOG.debug("Found {} features", speciesFeatures.size());
 
-    // 16x decrease due to painting on large vector tiles.  Picks a sensible default
-    final double radius = hexRadius == null ? 80 : hexRadius*16;
-    final double hexWidth = radius*2;
-    final double hexHeight = Math.sqrt(3) * radius;
+    if (!speciesFeatures.isEmpty()) {
+      // 16x decrease due to painting on large vector tiles.  Picks a sensible default
+      final double radius = hexRadius == null ? 80 : hexRadius*16;
+      final double hexWidth = radius*2;
+      final double hexHeight = Math.sqrt(3) * radius;
 
-    // Buffer needs to be 3xradius
-    final VectorTileEncoder encoder = new VectorTileEncoder(LARGE_TILE_SIZE, (int)Math.ceil(Math.max(hexWidth,hexHeight)), false);
+      final VectorTileEncoder encoder = new VectorTileEncoder(LARGE_TILE_SIZE, 8, false);
 
-    // set up the NxM grid of hexes, allowing for 2 cells buffer horizonatally and 1 vertically (since flat topped)
-    // the 6.0/5.0 factor is because we get 6 tiles in horizontal space of 5 widths due to the packing
-    int requiredWidth = (int)Math.ceil(LARGE_TILE_SIZE * 6.0 / hexWidth * 5.0) + 4;
-    int requiredHeight = (int)Math.ceil(LARGE_TILE_SIZE / hexHeight) + 2;
-    LOG.debug("Hex sizes {}x{} calculated grid {}x{}", hexWidth, hexHeight, requiredWidth, requiredHeight);
+      // set up the NxM grid of hexes, allowing for 1 cells buffer
+      // the 6.0/5.0 factor is because we get 6 tiles in horizontal space of 5 widths due to the packing of hexagons
+      int requiredWidth = (int)Math.ceil(LARGE_TILE_SIZE * 6.0 / hexWidth * 5.0) + 2;
+      int requiredHeight = (int)Math.ceil(LARGE_TILE_SIZE / hexHeight) + 2;
+      LOG.debug("Hex sizes {}x{} calculated grid {}x{}", hexWidth, hexHeight, requiredWidth, requiredHeight);
 
-    HexagonalGridBuilder builder = new HexagonalGridBuilder()
-      .setGridWidth(requiredWidth)
-      .setGridHeight(requiredHeight)
-      .setGridLayout(HexagonalGridLayout.RECTANGULAR)
-      .setOrientation(HexagonOrientation.FLAT_TOP)
-      .setRadius(radius);
+      HexagonalGridBuilder builder = new HexagonalGridBuilder()
+        .setGridWidth(requiredWidth)
+        .setGridHeight(requiredHeight)
+        .setGridLayout(HexagonalGridLayout.RECTANGULAR)
+        .setOrientation(HexagonOrientation.FLAT_TOP)
+        .setRadius(radius);
 
-    HexagonalGrid grid = builder.build();
-    Observable<Hexagon> hexagons = grid.getHexagons();
+      HexagonalGrid grid = builder.build();
 
-    // hexagons do not align at boundaries, and therefore we need to determine the offsets to ensure polygons
-    // meet correctly across tiles.
-    // The maximum offset is 1.5 cells horizontally and 1 cell vertically due to using flat top tiles.  This is
-    // apparent when you see a picture. See this as an excellent resource
-    // http://www.redblobgames.com/grids/hexagons/#basics
-    final double offsetX = (x*((LARGE_TILE_SIZE)%(1.5*hexWidth)))%(1.5*hexWidth);
-    final double offsetY = (y*(LARGE_TILE_SIZE%hexHeight))%hexHeight;
+      // hexagons do not align at boundaries, and therefore we need to determine the offsets to ensure polygons
+      // meet correctly across tiles.
+      // The maximum offset is 1.5 cells horizontally and 1 cell vertically due to using flat top tiles.  This is
+      // apparent when you see a picture. See this as an excellent resource
+      // http://www.redblobgames.com/grids/hexagons/#basics
+      final double offsetX = (x*((LARGE_TILE_SIZE)%(1.5*hexWidth)))%(1.5*hexWidth);
+      final double offsetY = (y*(LARGE_TILE_SIZE%hexHeight))%hexHeight;
 
-    // for each feature returned from the DB locate its hexagon and store the data on the hexagon
-    Set<Hexagon> dataCells = Sets.newHashSet();
-    for(PointFeature feature : features) {
+      // for each feature returned from the DB locate its hexagon and store the data on the hexagon
+      Set<Hexagon> dataCells = Sets.newHashSet();
+      for(PointFeature feature : speciesFeatures) {
 
-      // is the feature on the tile we are painting? TODO: we need to consider buffer!!!
-      int[] tileXY = MERCATOR.GoogleTile(feature.getLatitude(), feature.getLongitude(), z);
-      if (tileXY[0] == x && tileXY[1] == y) {
+        // is the feature on the tile we are painting? TODO: we need to consider buffer!!!
+        java.awt.Point tileAddress = MercatorProjectionUtils.toTileXY(feature.getLatitude(), feature.getLongitude(), z);
+        if (tileAddress.getX() == x && tileAddress.getY() == y) {
 
-        // find the pixel offsets local to the top left of the tile
-        int[] tileLocalXYSmallTile = getTileLocalCoordinates(z, feature);
-        double[] tileLocalXY = new double[]{
-          tileLocalXYSmallTile[0] * LARGE_TILE_SIZE/TILE_SIZE,
-          tileLocalXYSmallTile[1] * LARGE_TILE_SIZE/TILE_SIZE
-        };
+          // find the pixel offsets local to the top left of the tile
+          int[] tileLocalXYSmallTile = getTileLocalCoordinates(z, feature);
+          double[] tileLocalXY = new double[]{
+            tileLocalXYSmallTile[0] * TILE_RATIO,
+            tileLocalXYSmallTile[1] * TILE_RATIO
+          };
 
-        // We need to consider that the hexagons will be offset at rendering time to adjust for tile boundaries.
-        Optional<Hexagon> hex = grid.getByPixelCoordinate(tileLocalXY[0] + offsetX, tileLocalXY[1] + offsetY);
-        if (hex.isPresent()) {
-          Hexagon hexagon = hex.get();
+          // We need to consider that the hexagons will be offset at rendering time to adjust for tile boundaries.
+          Optional<Hexagon> hex = grid.getByPixelCoordinate(tileLocalXY[0] + offsetX, tileLocalXY[1] + offsetY);
+          if (hex.isPresent()) {
+            Hexagon hexagon = hex.get();
 
-
-          // store the data on the cell
-          SatelliteData cellData = null;
-          Optional<SatelliteData> cellDataO = hexagon.getSatelliteData();
-          if (!hexagon.getSatelliteData().isPresent()) {
-            cellData = new DefaultSatelliteData();
-            hexagon.setSatelliteData(cellData);
-          } else {
-            cellData = hexagon.getSatelliteData().get();
-          }
-          // ID the hexagon by the latLng of the center to avoid having to faff around with tile boundaries
-          double[] latLng = latLngCentreOf(hexagon,offsetX, offsetY, z,x,y);
-          cellData.addCustomData("id", roundTwoDecimals(latLng[0]) + "," + roundTwoDecimals(latLng[1]));
-          if (!cellData.getCustomData("speciesCounts").isPresent()) {
-            cellData.addCustomData("speciesCounts", feature.getSpeciesCounts());
-          } else {
-            Map<Integer,Integer> existingCounts = (Map<Integer,Integer>)cellData.getCustomData("speciesCounts").get();
-            for (Map.Entry<Integer, Integer> e : feature.getSpeciesCounts().entrySet()) {
-              int value = existingCounts.containsKey(e.getKey()) ?
-                existingCounts.get(e.getKey()) + e.getValue() : e.getValue();
-              existingCounts.put(e.getKey(), value);
+            // store the data on the cell
+            SatelliteData cellData = null;
+            Optional<SatelliteData> cellDataO = hexagon.getSatelliteData();
+            if (!hexagon.getSatelliteData().isPresent()) {
+              cellData = new DefaultSatelliteData();
+              hexagon.setSatelliteData(cellData);
+            } else {
+              cellData = hexagon.getSatelliteData().get();
             }
-          }
-          if (!cellData.getCustomData("groupCounts").isPresent()) {
-            cellData.addCustomData("groupCounts", feature.getGroupCounts());
-          } else {
-            Map<Integer,Integer> existingCounts = (Map<Integer,Integer>)cellData.getCustomData("groupCounts").get();
-            for (Map.Entry<Integer, Integer> e : feature.getGroupCounts().entrySet()) {
-              int value = existingCounts.containsKey(e.getKey()) ?
-                existingCounts.get(e.getKey()) + e.getValue() : e.getValue();
-              existingCounts.put(e.getKey(), value);
+
+            // merge in the species data
+            if (!cellData.getCustomData("speciesCounts").isPresent()) {
+              cellData.addCustomData("speciesCounts", feature.getYearCounts());
+            } else {
+              Map<String, Integer> existingCounts = (Map<String, Integer>) cellData.getCustomData("speciesCounts").get();
+              for (Map.Entry<String, Integer> e : feature.getYearCounts().entrySet()) {
+                int value = existingCounts.containsKey(e.getKey()) ?
+                  existingCounts.get(e.getKey()) + e.getValue() : e.getValue();
+                existingCounts.put(e.getKey(), value);
+              }
             }
+            dataCells.add(hexagon);
           }
-          dataCells.add(hex.get());
         }
       }
-    }
 
+      List<PointFeature> groupFeatures  = dataService.getGroupFeatures(minYear, maxYear);
+      for(PointFeature feature : groupFeatures) {
 
+        // is the feature on the tile we are painting? TODO: we need to consider buffer!!!
+        java.awt.Point tileAddress = MercatorProjectionUtils.toTileXY(feature.getLatitude(), feature.getLongitude(), z);
+        if (tileAddress.getX() == x && tileAddress.getY() == y) {
 
-    for (Hexagon hexagon : dataCells) {
-      Coordinate[] coordinates = new Coordinate[7];
-      int i=0;
-      for(org.codetome.hexameter.core.api.Point point : hexagon.getPoints()) {
-        coordinates[i++] = new Coordinate(point.getCoordinateX() - offsetX, point.getCoordinateY() - offsetY);
-      }
-      coordinates[6] = coordinates[0]; // close our polygon
-      LinearRing linear = GEOMETRY_FACTORY.createLinearRing(coordinates);
-      Polygon poly = new Polygon(linear, null, GEOMETRY_FACTORY);
+          // find the pixel offsets local to the top left of the tile
+          int[] tileLocalXYSmallTile = getTileLocalCoordinates(z, feature);
+          double[] tileLocalXY = new double[]{
+            tileLocalXYSmallTile[0] * TILE_RATIO,
+            tileLocalXYSmallTile[1] * TILE_RATIO
+          };
 
-      Map<String, Object> meta = Maps.newHashMap();
-      SatelliteData data = hexagon.getSatelliteData().get(); // must exist
+          // We need to consider that the hexagons will be offset at rendering time to adjust for tile boundaries.
+          Optional<Hexagon> hex = grid.getByPixelCoordinate(tileLocalXY[0] + offsetX, tileLocalXY[1] + offsetY);
+          if (hex.isPresent()) {
+            Hexagon hexagon = hex.get();
 
-      Map<Integer,Integer> speciesCounts = (Map<Integer,Integer>)data.getCustomData("speciesCounts").get();
-      Map<Integer,Integer> groupCounts = (Map<Integer,Integer>)data.getCustomData("groupCounts").get();
-      SimpleRegression regression = new SimpleRegression();
-      // require 2 points minimum
-      if (speciesCounts.size()>2) {
-        for (Integer year : speciesCounts.keySet()) {
-          double normalizedCount = ((double) speciesCounts.get(year)) /
-                                   groupCounts.get(year);
-          regression.addData(year, normalizedCount);
+            // satellite data must be present if the species is in the hexagon
+            if (hexagon.getSatelliteData().isPresent()) {
+              SatelliteData cellData = hexagon.getSatelliteData().get();
+
+              if (!cellData.getCustomData("groupCounts").isPresent()) {
+                cellData.addCustomData("groupCounts", feature.getYearCounts());
+              } else {
+                Map<String, Integer> existingCounts = (Map<String, Integer>) cellData.getCustomData("groupCounts").get();
+                for (Map.Entry<String, Integer> e : feature.getYearCounts().entrySet()) {
+                  int value = existingCounts.containsKey(e.getKey()) ?
+                    existingCounts.get(e.getKey()) + e.getValue() : e.getValue();
+                  existingCounts.put(e.getKey(), value);
+                }
+              }
+            }
+          }
         }
       }
-      meta.put("id", data.getCustomData("id"));
-      meta.put("slope", regression.getSlope());
-      meta.put("intercept", regression.getIntercept());
-      meta.put("significance", regression.getSignificance());
-      meta.put("SSE", regression.getSumSquaredErrors());
-      meta.put("interceptStdErr", regression.getInterceptStdErr());
-      meta.put("meanSquareError", regression.getMeanSquareError());
-      meta.put("slopeStdErr", regression.getSlopeStdErr());
-      meta.put("speciesCounts", speciesCounts);
-      meta.put("groupCounts", groupCounts);
-      encoder.addFeature("hex", meta, poly);
-    }
 
-    // for each of our hexagons, create a feature
-    /*
-    grid.getHexagons().forEach(new Action1<Hexagon>() {
-      @Override
-      public void call(Hexagon hexagon) {
+      // all hexagons are in the dataCells, which may or may not have group data.
+
+      for (Hexagon hexagon : dataCells) {
         Coordinate[] coordinates = new Coordinate[7];
         int i=0;
         for(org.codetome.hexameter.core.api.Point point : hexagon.getPoints()) {
-
           coordinates[i++] = new Coordinate(point.getCoordinateX() - offsetX, point.getCoordinateY() - offsetY);
         }
         coordinates[6] = coordinates[0]; // close our polygon
-
         LinearRing linear = GEOMETRY_FACTORY.createLinearRing(coordinates);
         Polygon poly = new Polygon(linear, null, GEOMETRY_FACTORY);
-        Map<String, Object> meta = Maps.newHashMap();
 
-        // ID the hexagon by the latLng of the center to avoid having to faff around with tile boundaries
+        SatelliteData data = hexagon.getSatelliteData().get(); // must exist
+        Map<String,Integer> groupCounts = data.<Map<String,Integer>>getCustomData("groupCounts").get();
+
+        Map<String, Object> meta = Maps.newHashMap();
         double[] latLng = latLngCentreOf(hexagon,offsetX, offsetY, z,x,y);
-        meta.put("id", latLng[0] + "," + latLng[1]);
+        meta.put("id", roundTwoDecimals(latLng[0]) + "," + roundTwoDecimals(latLng[1]));
+        meta.put("groupCounts", MAPPER.writeValueAsString(groupCounts));
+
+
+        Optional<Map<String,Integer>> optionalSpeciesCounts = data.getCustomData("speciesCounts");
+        if (optionalSpeciesCounts.isPresent()) {
+          Map<String,Integer> speciesCounts = optionalSpeciesCounts.get();
+          // infer absence
+          for (String year : groupCounts.keySet()) {
+            if (!speciesCounts.containsKey(year)) {
+              speciesCounts.put(year, 0);
+            }
+          }
+          if (speciesCounts.size() >= yearThreshold && speciesCounts.size()>2) {
+            SimpleRegression regression = new SimpleRegression();
+            for (String year : speciesCounts.keySet()) {
+              double normalizedCount = ((double) speciesCounts.get(year)) /
+                                       groupCounts.get(year);
+              regression.addData(Double.valueOf(year), normalizedCount);
+            }
+            meta.put("slope", regression.getSlope());
+            meta.put("intercept", regression.getIntercept());
+            meta.put("significance", regression.getSignificance());
+            meta.put("SSE", regression.getSumSquaredErrors());
+            meta.put("interceptStdErr", regression.getInterceptStdErr());
+            meta.put("meanSquareError", regression.getMeanSquareError());
+            meta.put("slopeStdErr", regression.getSlopeStdErr());
+          }
+          meta.put("speciesCounts", MAPPER.writeValueAsString(speciesCounts));
+        }
+
         encoder.addFeature("hex", meta, poly);
       }
-    });
-    */
 
-    return encoder.encode();
+      return encoder.encode();
+    }
+
+    return null;
   }
 
   /**
@@ -449,7 +430,7 @@ public final class TileResource {
     double[] meters = MERCATOR.PixelsToMeters(coords[0], coords[1], z);
     LOG.debug("meters: {},{}", meters[0], meters[1]);
     double[]latLng = MERCATOR.MetersToLatLon(meters[0], meters[1]);
-    LOG.info("latLng: {},{}", roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1]));
+    LOG.debug("latLng: {},{}", roundTwoDecimals(-1 * latLng[0]), roundTwoDecimals(latLng[1]));
     return new double[]{-1 * latLng[0], latLng[1]};
   }
 
@@ -471,7 +452,30 @@ public final class TileResource {
     LOG.debug("{},{} as raster {},{}", feature.getLatitude(), feature.getLongitude(), rasterXY[0], rasterXY[1]);
     int[] tileLocalXY = MERCATOR.PixelsToTileLocal(rasterXY[0], rasterXY[1]);
     LOG.debug("{},{} on tile local {},{}", feature.getLatitude(), feature.getLongitude(), tileLocalXY[0], tileLocalXY[1]);
-    return tileLocalXY;
+    //return tileLocalXY;
+
+    int x= MercatorProjectionUtils.getOffsetX(feature.getLatitude(), feature.getLongitude(), z);
+    int y= MercatorProjectionUtils.getOffsetY(feature.getLatitude(), feature.getLongitude(), z);
+    return new int[] {x,y};
+  }
+
+  public static Point2D toNormalisedPixelCoords(double lat, double lng) {
+    lng = (lng%360) / 360; // support the wrap around libraries
+    lat = 0.5 - ((Math.log(Math.tan((Math.PI / 4) + ((0.5 * Math.PI * lat) / 180))) / Math.PI) / 2.0);
+    return new Point2D.Double(lng, lat);
+  }
+
+
+  public static int toTileX(double lng, int zoom) {
+    lng = (lng%360) / 360; // support the wrap around libraries
+    int scale = 1 << zoom;
+    return (int)(lng * scale);
+  }
+
+  public static int toTileY(double lat, int zoom) {
+    lat = 0.5 - ((Math.log(Math.tan((Math.PI / 4) + ((0.5 * Math.PI * lat) / 180))) / Math.PI) / 2.0);
+    int scale = 1 << zoom;
+    return (int)(lat * scale);
   }
 
   /**
@@ -492,11 +496,11 @@ public final class TileResource {
 
     VectorTileEncoder encoder = new VectorTileEncoder(TILE_SIZE, 0, true);
     Coordinate[] coordinates = {
-      new Coordinate(64, 64),
-      new Coordinate(64, 192),
-      new Coordinate(192, 192),
-      new Coordinate(192, 64),
-      new Coordinate(64, 64)
+      new Coordinate(1, 1),
+      new Coordinate(1, 254),
+      new Coordinate(254, 254),
+      new Coordinate(254, 1),
+      new Coordinate(1, 1)
     };
     LinearRing linear = GEOMETRY_FACTORY.createLinearRing(coordinates);
     Polygon poly = new Polygon(linear, null, GEOMETRY_FACTORY);

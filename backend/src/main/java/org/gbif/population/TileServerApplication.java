@@ -2,6 +2,7 @@ package org.gbif.population;
 
 
 import org.gbif.population.data.DataDAO;
+import org.gbif.population.data.DataService;
 import org.gbif.population.resource.TileResource;
 
 import io.dropwizard.Application;
@@ -36,6 +37,7 @@ public class TileServerApplication extends Application<TileServerConfiguration> 
     final DBIFactory factory = new DBIFactory();
     final DBI jdbi = factory.build(environment, configuration.getDataSourceFactory(), "MySQL");
     final DataDAO dataDao = jdbi.onDemand(DataDAO.class);
-    environment.jersey().register(new TileResource(dataDao));
+    final DataService dataService = new DataService(dataDao);
+    environment.jersey().register(new TileResource(dataService));
   }
 }

@@ -28,6 +28,7 @@
     <p>
     Select the minimum number of years of data required per location to be included:
     <select onchange="updateThreshold(this)">
+      <option value="1">1 years</option>
       <option value="2">2 years</option>
       <option value="5">5 years</option>
       <option value="10">10 years</option>
@@ -57,9 +58,9 @@ mapboxgl.accessToken = 'pk.eyJ1IjoiZ2JpZiIsImEiOiJjaW0xeXU1c3gwMG04dm1tNXB3cjJ3Z
 
 var minYear = 1900;
 var maxYear = 2016;
-var yearThreshold = 2; // minimum number of years for which there has to be data
+var yearThreshold = 1; // minimum number of years for which there has to be data
 var speciesKey=1958323;
-var regressionLayer = "http://tiletest.gbif.org/" + speciesKey + "/{z}/{x}/{y}/points.pbf";
+var regressionLayer = "http://localhost:7001/" + speciesKey + "/{z}/{x}/{y}/points.pbf";
 var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=4&type=TAXON&key="+speciesKey;
 
 /**
@@ -69,9 +70,14 @@ function initMap(map, minYear, maxYear) {
     // Remove layers if they exist
     if (map.getSource('regression')) map.removeSource('regression');
     if (map.getSource('occurrence')) map.removeSource('occurrence');
+    if (map.getSource('demo')) map.removeSource('demo');
+    if (map.getSource('json')) map.removeSource('json');
     if (map.getLayer('regression-fill-0')) map.removeLayer('regression-fill-0');
     if (map.getLayer('regression-fill-1')) map.removeLayer('regression-fill-1');
+    if (map.getLayer('regression-fill-2')) map.removeLayer('regression-fill-2');
     if (map.getLayer('occurrence-tiles')) map.removeLayer('occurrence-tiles');
+    if (map.getLayer('demo')) map.removeLayer('demo');
+    if (map.getLayer('json')) map.removeLayer('json');
 
     map.addSource('regression', {
         type: 'vector',
@@ -83,12 +89,60 @@ function initMap(map, minYear, maxYear) {
         "tileSize": 256
     });
 
+    /*
+    map.addSource("json", {
+        type: "geojson",
+        data: "https://dl.dropboxusercontent.com/u/608155/transient/geodata.geojson",
+        clusterMaxZoom: 14, // Max zoom to cluster points on
+        clusterRadius: 50 // Radius of each cluster when clustering points (defaults to 50)
+    });
+    map.addLayer({
+        "id": "json",
+        "type": "circle",
+        "source": "json",
+        "paint": {
+            "circle-radius": 5,
+            "circle-color": "#00F",
+            "circle-opacity": 0.1            
+        },
+    });
+    */
+    map.addSource('demo', {
+        type: 'vector',
+        "tiles": ["http://localhost:7001/{z}/{x}/{y}/demo.pbf"]
+    });
+    map.addLayer({
+        "id": "demo",
+        "type": "line",
+        "source": "demo",
+        "source-layer": "statistics",
+        "paint": {
+          "line-color": "#7b7b7b",
+          "line-width": 0.5,
+          "line-opacity": 1          
+        }                  
+    });
+
     // occurrence layer
     map.addLayer({
         "id": "occurrence-tiles",
         "type": "raster",
         "source": "occurrence"
     });
+
+
+    map.addLayer({
+        "id": "regression-fill-2",
+        "type": "circle",
+        "source": "regression",
+        "source-layer": "points",
+        "paint": {
+            "circle-radius": 5,
+            "circle-color": "#CCC",
+            "circle-opacity": 0.5            
+        },
+    });
+ 
 
     map.addLayer({
         "id": "regression-fill-0",
@@ -98,10 +152,9 @@ function initMap(map, minYear, maxYear) {
         "paint": {
             "circle-radius": 5,
             "circle-color": "#0F0",
-            "circle-opacity": 0.5            
+            "circle-opacity": 1            
         },
-        "filter": ['>=', "slope", 0]
-        
+       "filter": ['>=', "slope", 0.0]
     });
     map.addLayer({
         "id": "regression-fill-1",
@@ -113,8 +166,9 @@ function initMap(map, minYear, maxYear) {
             "circle-color": "#F00",
             "circle-opacity": 0.5            
         },
-        "filter": ['<', "slope", 0]
+        "filter": ['<=', "slope", 0]
     });
+   
 }
 
 /**
@@ -133,8 +187,8 @@ function yearsToGBIFParams(minYear, maxYear) {
 var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/light-v8',
-    center: [10, 50],
-    zoom: 3,
+    center: [-20, 50],
+    zoom: 3.5,
     maxZoom: 8.9
 });
 map.addControl(new mapboxgl.Navigation());

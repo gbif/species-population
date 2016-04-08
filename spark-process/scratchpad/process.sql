@@ -2,10 +2,12 @@
 
 USE tim;
 
--- create a source tbale
+-- create a source talle
+/*
 CREATE TABLE lep_source STORED AS ORCFILE AS
 SELECT
   speciesKey,
+  scientificName,
   year,
   decimalLatitude AS lat,
   decimalLongitude AS lng,
@@ -18,7 +20,7 @@ WHERE
   hasGeospatialIssues = false AND
   year IS NOT NULL AND year >= 1970 AND
   basisOfRecord != 'FOSSIL_SPECIMEN' AND basisOfRecord != 'LIVING_SPECIMEN'
-GROUP BY speciesKey, year, decimalLatitude, decimalLongitude;
+GROUP BY speciesKey, scientificName, year, decimalLatitude, decimalLongitude;
 
 ADD JAR hdfs://prodmaster1-vh.gbif.org:8020/user/trobertson/hive-udfs-1.0-SNAPSHOT14.jar;
 CREATE TEMPORARY function tile AS 'org.gbif.eubon.udf.TileUtilsUdf';
@@ -123,6 +125,7 @@ CREATE TABLE lep_5
 ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' AS
 SELECT speciesKey, z, x, y, to_json(data) AS cells
 FROM lep_4;
+*/
 
 -- For MySQL:
 CREATE TABLE tiles(
@@ -135,6 +138,67 @@ CREATE TABLE tiles(
   INDEX lookup(speciesKey,z,x,y)
 ) ENGINE = MyISAM;
 -- load data local infile '/tmp/lep2.csv' into table tiles;
+
+
+
+CREATE TABLE tim.occurrence
+STORED AS orc AS
+SELECT
+  gbifId,kingdomKey,phylumKey,classKey,orderKey,familyKey,genusKey,speciesKey,
+  decimalLatitude, decimalLongitude, hasGeospatialIssues,
+  year, month, day, basisOfRecord, datasetKey, publishingOrgKey, countryCode
+FROM prod_b.occurrence_hdfs;
+
+
+CREATE TABLE tim.lep_records_1
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' AS
+SELECT
+  speciesKey,
+    concat('POINT(', round(decimalLongitude,2), ' ', round(decimalLatitude,2), ')') as geom,
+  year,
+  count(*) AS speciesCount
+FROM tim.occurrence
+WHERE
+  orderKey=797 AND speciesKey IS NOT NULL AND
+  decimalLatitude IS NOT NULL AND decimalLatitude BETWEEN -85 AND 85 AND
+  decimalLongitude IS NOT NULL AND decimalLongitude BETWEEN -180 AND 180 AND
+  hasGeospatialIssues = false AND
+  year IS NOT NULL AND year >= 1900 AND
+  basisOfRecord != 'FOSSIL_SPECIMEN' AND basisOfRecord != 'LIVING_SPECIMEN'
+GROUP BY
+  speciesKey, year, round(decimalLatitude,2), round(decimalLongitude,2);
+
+
+CREATE TABLE tim.lep_records_1_group
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' AS
+SELECT
+  concat('POINT(', round(decimalLongitude,2), ' ', round(decimalLatitude,2), ')') as geom,
+  year,
+  count(*) AS groupCount
+FROM tim.occurrence
+WHERE
+  orderKey=797 AND speciesKey IS NOT NULL AND
+  decimalLatitude IS NOT NULL AND decimalLatitude BETWEEN -85 AND 85 AND
+  decimalLongitude IS NOT NULL AND decimalLongitude BETWEEN -180 AND 180 AND
+  hasGeospatialIssues = false AND
+  year IS NOT NULL AND year >= 1900 AND
+  basisOfRecord != 'FOSSIL_SPECIMEN' AND basisOfRecord != 'LIVING_SPECIMEN'
+GROUP BY
+  year, round(decimalLatitude,2), round(decimalLongitude,2);
+
+
+
+CREATE TABLE tim.lep_records_1_final
+ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' AS
+SELECT
+  s.speciesKey,
+  s.geom,
+  s.year,
+  s.speciesCount,
+  g.groupCount as orderCount
+FROM
+  tim.lep_records_1 s
+  JOIN tim.lep_records_1_group g ON s.geom=g.geom AND s.year=g.year;
 
 
 -- For MySQL (with the wide table):
@@ -161,6 +225,23 @@ FROM lepidoptera_import;
 ALTER TABLE lepidoptera ADD INDEX lookup(speciesKey,geom);
 ALTER TABLE lepidoptera ADD INDEX lookup2(speciesKey,year,geom);
 
+CREATE TABLE lepidoptera_names  (
+  speciesKey MEDIUMINT UNSIGNED NOT NULL,
+  scientificName VARCHAR(255) NOT NULL,
+  PRIMARY KEY(speciesKey),
+  INDEX lookup(scientificName)
+) ENGINE = MyISAM;
+load data local infile '/tmp/lep_names.csv' into table lepidoptera_names;
+
+Which is created in HIVE:
+  CREATE TABLE tim.lep_names
+  ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' AS
+  SELECT taxonKey, scientificName
+  FROM prod_b.occurrence_hdfs
+  WHERE orderKey=797 AND taxonKey=speciesKey
+  GROUP BY scientificName, taxonKey
+  HAVING COUNT()
+
 SELECT
   X(geom),
   Y(geom),
@@ -170,3 +251,24 @@ WHERE speciesKey=5124911
 AND YEAR BETWEEN 1970 AND 2016
 GROUP BY geom
 HAVING count(year)>=2;
+
+
+CREATE TABLE test AS
+SELECT speciesKey, geom, GROUP_CONCAT(CONCAT(year,':', speciesCount)) AS yearCounts
+FROM lepidoptera
+GROUP BY speciesKey, geom;
+ALTER TABLE test ADD INDEX lookup(speciesKey);
+ALTER TABLE test ADD INDEX lookup(speciesKey,geom);
+
+
+CREATE TABLE lepidoptera_group AS
+SELECT geom, year, sum(speciesCount) as count
+FROM lepidoptera
+GROUP BY geom,year;
+ALTER TABLE lepidoptera_group ADD INDEX lookup3(geom);
+
+CREATE TABLE test2 AS
+SELECT geom, GROUP_CONCAT(CONCAT(year,':', count)) AS yearCounts
+FROM lepidoptera_group
+GROUP BY geom;
+ALTER TABLE test2 ADD INDEX lookup2(geom);

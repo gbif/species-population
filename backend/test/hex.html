@@ -80,8 +80,8 @@ var minYear = 1900;
 var maxYear = 2016;
 var yearThreshold = 2; // minimum number of years for which there has to be data
 var hexRadius = 5; // size of the hexagon
-var speciesKey=1958323;
-var regressionLayer = "http://tiletest.gbif.org/" + speciesKey + "/{z}/{x}/{y}/hex.pbf";
+var speciesKey=1962204;
+var regressionLayer = "http://localhost:7001/" + speciesKey + "/{z}/{x}/{y}/hex.pbf";
 var occurrenceLayer = "http://api.gbif.org/v1/map/density/tile?x={x}&y={y}&z={z}&palette=reds&resolution=4&type=TAXON&key="+speciesKey;
 
 /**
@@ -194,8 +194,8 @@ function yearsToGBIFParams(minYear, maxYear) {
 var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/light-v8',
-    center: [10, 50],
-    zoom: 0,
+    center: [-20, 50],
+    zoom: 3.5,
     maxZoom: 8.9
 });
 map.addControl(new mapboxgl.Navigation());
@@ -215,6 +215,7 @@ map.on('mousemove', function (e) {
         map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
         if (!err && features.length) {
             map.setFilter("regression-fill-hover", ["==", "id", features[0].properties.id]);
+            //console.log(features[0].properties.id);
             //map.setFilter("regression-fill-label", ["==", "id", features[0].properties.id]);
         } else {
             map.setFilter("regression-fill-hover", ["==", "id", ""]);
@@ -224,14 +225,14 @@ map.on('mousemove', function (e) {
 });
 
 map.on('click', function (e) {
-    debugger;
     map.featuresAt(e.point, {
         radius: 0,
         layer: 'regression-fill-0'
     }, function (err, features) {
         map.getCanvas().style.cursor = (!err && features.length) ? 'pointer' : '';
         if (!err && features.length) {
-            //map.setFilter("regression-fill-label", ["==", "id", features[0].properties.id]);
+            map.setFilter("regression-fill-label", ["==", "id", features[0].properties.id]);
+            console.log(features[0].properties.id);
         }
     });
 });
