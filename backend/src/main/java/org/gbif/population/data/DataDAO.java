@@ -28,36 +28,6 @@ public interface DataDAO {
             + "  FROM lepidoptera_group")
   List<PointFeature> getGroupCounts();
 
-/*
-  @SqlQuery("SELECT"
-            + "  X(geom) AS longitude,"
-            + "  Y(geom) AS latitude,"
-            + "  GROUP_CONCAT(CONCAT(year,':', speciesCount, ':',orderCount)) AS features"
-            + "  FROM lepidoptera"
-            + "  WHERE speciesKey=:speciesKey"
-            + "  AND YEAR BETWEEN :minYear AND :maxYear"
-            + "  GROUP BY geom"
-            + "  HAVING count(year)>=:yearThreshold")
-  List<PointFeature> getRecords(
-    @Bind("speciesKey") String speciesKey, @Bind("minYear") int minYear,
-    @Bind("maxYear") int maxYear, @Bind("yearThreshold") int yearThreshold);
-
-  @SqlQuery("SELECT"
-            + "  year, sum(speciesCount) AS speciesCount, sum(orderCount) AS orderCount"
-            + "  FROM lepidoptera"
-            + "  WHERE speciesKey=:speciesKey"
-            + "  AND YEAR BETWEEN :minYear AND :maxYear"
-            + "  AND X(geom) BETWEEN :minLongitude AND :maxLongitude"
-            + "  AND Y(geom) BETWEEN :minLatitude AND :maxLatitude"
-            + "  GROUP BY year"
-            + "  HAVING count(year)>=:yearThreshold")
-  List<YearFeature> getRecords(
-    @Bind("speciesKey") String speciesKey, @Bind("minYear") int minYear,
-    @Bind("maxYear") int maxYear, @Bind("yearThreshold") int yearThreshold,
-    @Bind("minLatitude") double minLatitude, @Bind("maxLatitude") double maxLatitude,
-    @Bind("minLongitude") double minLongitude, @Bind("maxLongitude") double maxLongitude);
-*/
-
   @SqlQuery("SELECT speciesKey, scientificName FROM lepidoptera_names "
             + "WHERE scientificName like :prefix "
             + "ORDER BY scientificName LIMIT 25")

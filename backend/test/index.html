@@ -89,7 +89,6 @@ function initMap(map, minYear, maxYear) {
         "tileSize": 256
     });
 
-    /*
     map.addSource("json", {
         type: "geojson",
         data: "https://dl.dropboxusercontent.com/u/608155/transient/geodata.geojson",
@@ -101,12 +100,11 @@ function initMap(map, minYear, maxYear) {
         "type": "circle",
         "source": "json",
         "paint": {
-            "circle-radius": 5,
+            "circle-radius": 6,
             "circle-color": "#00F",
-            "circle-opacity": 0.1            
+            "circle-opacity": 1            
         },
     });
-    */
     map.addSource('demo', {
         type: 'vector',
         "tiles": ["http://localhost:7001/{z}/{x}/{y}/demo.pbf"]
@@ -188,7 +186,7 @@ var map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/light-v8',
     center: [-20, 50],
-    zoom: 3.5,
+    zoom: 0,
     maxZoom: 8.9
 });
 map.addControl(new mapboxgl.Navigation());
