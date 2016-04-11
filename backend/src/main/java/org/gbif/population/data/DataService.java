@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 public class DataService {
   private static final Logger LOG = LoggerFactory.getLogger(DataService.class);
   private static final int SPECIES_CACHE_SIZE = 1000;
-  private static final int GROUP_CACHE_SIZE = 1; // since no geometry in query, there is just one for now
+  private static final int GROUP_CACHE_SIZE = 100;
   private final DataDAO dataDAO;
 
   /**
@@ -56,44 +56,19 @@ public class DataService {
 
   public List<PointFeature> getSpeciesFeatures(int speciesKey, int minYear, int maxYear, int yearThreshold) {
     try {
-      // copy required to allow pruning
-      List<PointFeature> features = deepCopyOf(speciesFeaturesCache.get(new SpeciesCacheKey(speciesKey)));
-      // return a pruned list of years outside of the range and meeting the threshold requirements
-      for (PointFeature feature : features) {
-        filterByYearRange(feature.getYearCounts(), minYear, maxYear);
-      }
-      return Lists.newArrayList(filterByYearThreshold(features, yearThreshold));
-
+      return filterBy(speciesFeaturesCache.get(new SpeciesCacheKey(speciesKey)), minYear, maxYear, yearThreshold);
     } catch (ExecutionException e) {
       throw Throwables.propagate(e);
     }
   }
 
-  public List<PointFeature> getGroupFeatures(int minYear, int maxYear) {
+  public List<PointFeature> getGroupFeatures(int minYear, int maxYear, int yearThreshold) {
     try {
-      // copy required to allow pruning
-      List<PointFeature> features = deepCopyOf(groupFeaturesCache.get(GroupCacheKey.getInstance()));
-      // return a pruned list of years outside of the range and meeting the threshold requirements
-      for (PointFeature feature : features) {
-        filterByYearRange(feature.getYearCounts(), minYear, maxYear);
-      }
-      return features;
+      // require at least 1 year of data
+      return filterBy(groupFeaturesCache.get(GroupCacheKey.getInstance()), minYear, maxYear, yearThreshold);
     } catch (ExecutionException e) {
       throw Throwables.propagate(e);
     }
-  }
-
-  /**
-   * @return A true deep mutable copy to allow subsequent pruning
-   */
-  private List<PointFeature> deepCopyOf(List<PointFeature> source) {
-    List<PointFeature> target = Lists.newArrayList();
-    for (PointFeature f : source) {
-      // take a copy of the map to allow pruning
-      Map<String, Integer> yearCounts = Maps.newHashMap(ImmutableMap.copyOf(f.getYearCounts()));
-      target.add(new PointFeature(f.getLatitude(), f.getLongitude(), yearCounts));
-    }
-    return target;
   }
 
   public List<ScientificName> autocomplete(String prefix) {
@@ -101,28 +76,23 @@ public class DataService {
   }
 
   /**
-   * Filters out years outside of the range of interest.
+   * Returns a mutable copy of the source which is filtered to only those features who have years within the range and
+   * enough years to satisfy the threshold.
    */
-  private static void filterByYearRange(Map<String,Integer> years, final int minYear, final int maxYear) {
-    Iterator<Map.Entry<String, Integer>> iter = years.entrySet().iterator();
-    while (iter.hasNext()) {
-      Map.Entry<String, Integer> year = iter.next();
-      if (Integer.parseInt(year.getKey()) < minYear || Integer.parseInt(year.getKey()) > maxYear) {
-        iter.remove();
+  private List<PointFeature> filterBy(List<PointFeature> source, int minYear, int maxYear, int yearThreshold) {
+    List<PointFeature> result = Lists.newArrayList();
+    for(PointFeature f : source) {
+      Map<String, Integer> yearCopy = Maps.newHashMap();
+      for (Map.Entry<String, Integer> e : f.getYearCounts().entrySet()) {
+        if (Integer.parseInt(e.getKey()) >= minYear && Integer.parseInt(e.getKey()) <= maxYear) {
+          yearCopy.put(e.getKey(), e.getValue());
+        }
+      }
+      if (yearCopy.size()>=yearThreshold) {
+        result.add(new PointFeature(f.getLatitude(), f.getLongitude(), yearCopy));
       }
     }
-  }
-
-  /**
-   * Filters features that do not have long enough time series data.
-   */
-  private static Iterable<PointFeature> filterByYearThreshold(List<PointFeature> features, final int yearThreshold) {
-    return Iterables.filter(features, new Predicate<PointFeature>() {
-      @Override
-      public boolean apply(@Nullable PointFeature feature) {
-        return feature.getYearCounts().size() >= yearThreshold;
-      }
-    });
+    return result;
   }
 
   /**
