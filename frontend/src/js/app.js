@@ -38,7 +38,19 @@ $('#speciesTypeahead .typeahead').bind('typeahead:select', function(ev, suggesti
     initMap(map);
 });
 
-
+$('.blanket__close').on('click', function(e) {
+   $('.blanket').hide();
+    e.preventDefault();
+});
+$('.blanket__open').on('click', function(e) {
+    $('.blanket').show();
+    e.preventDefault();
+});
+$('.storyline__close').on('click', function(e) {
+    $('main').addClass('mapFocus');
+    map.resize();
+    e.preventDefault();
+});
 
 //function updateSpecies(select) {
 //    speciesKey = select.value;

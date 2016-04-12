@@ -61,8 +61,8 @@ function setStatLayers(key, type, hexRadius, yearThreshold) {
     };
     var paint = layerType == 'fill' ? paintFill : paintCircle;
 
-    var regressionTiles = 'http://trobertson:7001/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
-    //var regressionTiles = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
+    //var regressionTiles = 'http://trobertson:7001/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
+    var regressionTiles = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
     map.addSource('regression', {
         type: 'vector',
         "tiles": [regressionTiles]
@@ -182,6 +182,7 @@ map.on('click', function (e) {
  */
 function selectFeatureAtPoint(e) {
     if (!map.getLayer('regression')) return;
+    $('main').removeClass('mapFocus');
     map.featuresAt(e.point, {
         radius: 3,
         includeGeometry: true,
@@ -215,102 +216,6 @@ map.on('mousemove', function (e) {
     });
 });
 
-
-
-
-
-
-function showStats(data) {
-
-    var labels = [];
-    var points = [];
-    var normalized = [];
-    var line = [];
-
-    var speciesCounts = typeof data.speciesCounts === 'string' ? JSON.parse(data.speciesCounts) : data.speciesCounts;
-    var groupCounts = typeof data.groupCounts === 'string' ? JSON.parse(data.groupCounts) : data.groupCounts;
-
-    for (var i = minYear; i < maxYear; i++) {
-        labels.push(i);
-        //points.push(Math.random());
-        if (speciesCounts.hasOwnProperty(i.toString())) {
-            var s = speciesCounts[i];
-            var g = groupCounts[i];
-            var val = s/g;
-            normalized.push([i, val]);
-            points.push(val);
-        }
-        else {
-            points.push(null);
-        }
-        line.push( data.slope*i + data.intercept );
-    }
-
-    var interval = (maxYear-minYear) > 100 ? 25: 10;
-
-
-    var chart = new Chartist.Line('.ct-chart', {
-        labels: labels,
-        // Naming the series with the series object array notation
-        series: [
-            {
-                name: 'points',
-                data: points
-            },
-            {
-                name: 'line',
-                data: line
-            }
-        ]
-    }, {
-        fullWidth: true,
-        axisX: {
-            labelInterpolationFnc: function(value, index) {
-                return index % interval === 0 ? value : '';
-            },
-            showGrid: false
-        },
-        series: {
-            'line': {
-                lineSmooth: Chartist.Interpolation.none({
-                    fillHoles: true
-                }),
-                showLine: true,
-                showArea: false,
-                showPoint: false
-            },
-            'points': {
-                showLine: false,
-                showArea: false,
-                showPoint: true
-            }
-        },
-        plugins: [
-            Chartist.plugins.tooltip({
-            })
-        ]
-    });
-
-    $('.charts').show();
-    $('#stats').show();
-
-
-    $('#slope span').html(data.slope);
-
-    if (line.length > 1) {
-        var estChange = Math.round(100*line[line.length-1]/line[0]);
-        $('#estChange span').html(estChange + '%');
-        $('#estChange span').show();
-    } else {
-        $('#estChange span').hide();
-    }
-
-
-    $('#interceptStdErr span').html(data.interceptStdErr);
-    $('#meanSquareError span').html(data.meanSquareError);
-    $('#significance span').html(data.significance);
-    $('#slopeStdErr span').html(data.slopeStdErr);
-}
 
 
 noUiSlider.create(slider, {

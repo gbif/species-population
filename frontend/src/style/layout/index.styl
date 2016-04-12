@@ -1,6 +1,24 @@
+//Exlusive above
+isAbove($mediaSize) {
+	@media screen and (min-width: ($mediaSize+ 1px)) {
+		{block}
+	}
+}
+
+//Inclusive below
+isBelow($mediaSize) {
+	@media screen and (max-width: $mediaSize) {
+		{block}
+	}
+}
+
+
+
+
 @import "map"
 @import "story"
 @import "app"
+@import "help"
 html, body {
 	margin 0
 	padding 0px
@@ -39,7 +57,12 @@ h2 {
 	font-size 22px
 }
 .app .description {
-	font-weight bold
+	a {
+		color inherit
+		&:visited {
+			color inherit
+		}
+	}
 }
 
 section.description>div {

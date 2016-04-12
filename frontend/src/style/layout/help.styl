@@ -1,0 +1,102 @@
+.st0{fill:transparent;stroke:#666666;stroke-width:6;stroke-miterlimit:10;}
+.st1{fill:#999999;}
+.st2{fill:#FF6347;}
+.st0.result{fill: rgba(0, 109, 44, 0.43);}
+
+
+.blanket {
+	position absolute
+	top 0
+	left 0
+	right 0
+	bottom 0
+	background rgba(255,255,255,0.9)
+	z-index 100
+	padding 50px
+	overflow auto
+	display none
+	.blanket__close {
+		float right
+		cursor pointer
+	}
+	.blanket__close.button {
+		display block
+		width 250px
+		margin 30px auto
+		float initial
+		padding 5px 20px
+		text-align center
+		border 1px solid #aaa
+	}
+	.help__content {
+		max-width 800px
+		margin auto
+	}
+}
++isAbove(500px) {
+	.help__process {
+		> div {
+			group()
+			margin-bottom 20px
+			> svg {
+				width 150px
+				float left
+				margin-right 20px
+			}
+			> .desc {
+				float left
+				width calc(100% - 200px)
+				p {
+					margin 0
+					&:first-of-type {
+						font-weight bold
+						margin-bottom 1rem
+					}
+				}
+			}
+		}
+	}
+}
+
+.ct-example {
+	width 220px
+	float left
+	margin-left -50px
+	margin-bottom -50px
+	.ct-series-a .ct-point {
+		stroke tomato
+	}
+	.ct-point {
+		stroke-width 10px
+	}
+}
+
++isBelow(600px) {
+	.help__process {
+		> div {
+			group()
+			margin-bottom 20px
+			padding-bottom 20px
+			border-bottom 1px solid #aaa
+			> svg {
+				width 150px
+				margin 20px 0
+			}
+			> .desc {
+				p {
+					margin 0
+					&:first-of-type {
+						font-weight bold
+						margin-bottom 1rem
+					}
+				}
+			}
+		}
+		.ct-example {
+			margin-top 20px
+			margin-bottom -10px
+			width 100%
+			float initial
+		}
+	}
+}

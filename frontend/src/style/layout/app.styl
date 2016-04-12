@@ -1,3 +1,11 @@
+.appLogo {
+	background-image url('../assets/logo.png')
+	background-size contain
+	background-position center
+	background-repeat no-repeat
+	height 50px
+
+}
 .step {
 	position relative
 }
@@ -16,6 +24,13 @@ $numberHeight = 25px
 	text-align center
 	font-size 12px
 	display block
+}
+.numbering.help {
+	cursor pointer
+	&:hover {
+		color deepskyblue
+		border-color deepskyblue
+	}
 }
 
 .specieslist {
@@ -112,3 +127,4 @@ $numberHeight = 25px
 		display inline-block
 	}
 }
+

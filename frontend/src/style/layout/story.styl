@@ -5,12 +5,47 @@ section.story {
 .storyline {
 	background #fefefe
 	color #444
+	.storyline__close {
+		float right
+		padding 10px
+		cursor pointer
+		display none
+	}
 }
 .storyline {
 	margin-left calc(100% - 400px)
 	.chapter {
 		padding 50px 50px
 		min-height 100vh
-		border-bottom 1px solid #205356
 	}
+}
+
++isBelow(800px) {
+	main {
+		.storyline {
+			display block
+			width 100%
+			margin-left 0
+			.chapter {
+				padding 20px 20px 20px 50px
+				min-height 100vh
+			}
+			.storyline__close {
+				display block
+			}
+		}
+		.mapwrapper {
+			display none
+		}
+	}
+	main.mapFocus {
+		.storyline {
+			display none
+		}
+		.mapwrapper {
+			display block
+			width 100%
+		}
+	}
+
 }
