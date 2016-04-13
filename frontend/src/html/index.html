@@ -42,10 +42,12 @@
     <div class="blanket help">
         <div class="help__content">
             <span class="blanket__close">&#x2715;</span>
-            <h2>Estimating species trends</h2>
+            <h2>Exploring species population trends</h2>
+            <h3>Lepidoptera</h3>
             <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                This pilot tool is intended to help users determine if GBIF mediated data is likely to be suitable for deriving species population trends. The tool allows a user to navigate to a location and timespan of interest, and then it provides an analysis showing if the population for the species is in decline or increase.  This analysis involves normalizing the data for the species against all data collected for the group (Lepidoptera).  By normalizing against the group, the analysis attempts to compensate for biases in sampling effort.  In many cases this will work well, but in other cases this may provide misleading insights – however, by providing a transparent view of the process, the user can judge if there appears to be sufficient data to investigate further.
             </p>
+            <p>To explain the algorithm, please consider the following:</p>
             <div class="help__process">
                 <div>
                     <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
@@ -67,7 +69,7 @@
                     <div class="desc">
                         <p>1968</p>
                         <p>4 Early Thorn occurrences out of a total of 12 Lepidoptera</p>
-                        <p>33% of the total population</p>
+                        <p>33.33% of the total population</p>
                     </div>
                 </div>
 
@@ -130,8 +132,15 @@
                     </div>
                     <div class="desc">
                         <p>Linear regression</p>
-                        <p>Find the line that best describes the data. The slope tells us how fast the species is in decline or growth. In this example it is easy as we only use two points.</p>
-                        <p>The grey area shows the total amount of Lepidoptera normalized to fit the chart.</p>
+                        <p>
+                            Find the line that best describes the data. The slope tells us how fast the species is in decline or growth. In this example it is easy as we only use two points.
+                        </p>
+                        <p>
+                            The grey area shows the total amount of Lepidoptera normalized to fit the chart.
+                        </p>
+                        <p>
+                            It grew from 33.33% to 50% over 34 years, so is said to be growing annually at a rate of 0.49%.  The increase from 33.33% to 50% represents a 50% increase from the original value.
+                        </p>
                     </div>
                 </div>
 
@@ -142,13 +151,18 @@
                     </svg>
                     <div class="desc">
                         <p>Trend in period from 1968 - 2002</p>
-                        <p>The species is in growth relative to the total abundance of Lepidoptera.</p>
+                        <p>
+                            The species is in growth relative to the total abundance of Lepidoptera.  The locations on the map are colored based on the annual growth rates, to allow users to locate areas in decline or increase over the time range.
+                        </p>
                     </div>
                 </div>
 
             </div>
             <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                All data that is used for this application is available for download through GBIF.org.
+            </p>
+            <p>
+                We welcome all feedback and feature requests for this tool, as we strive towards a better understanding of what analyses are possible with the data that is openly available.
             </p>
             <span class="blanket__close button">Close</span>
         </div>
