@@ -11,6 +11,7 @@ import org.gbif.population.utils.MercatorProjection;
 import java.awt.geom.Point2D;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,29 +20,19 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
-import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
 
 import com.codahale.metrics.annotation.Timed;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LinearRing;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.Polygon;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import no.ecc.vectortile.VectorTileEncoder;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.codetome.hexameter.core.api.DefaultSatelliteData;
@@ -61,15 +52,13 @@ import rx.functions.Action1;
 /**
  * A simple resource that returns a demo tile.
  */
-@Path("/")
-@Singleton
-public final class TileResource {
+abstract class TileResource {
 
   private static final Logger LOG = LoggerFactory.getLogger(TileResource.class);
 
-  private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
-  private static final ObjectMapper MAPPER = new ObjectMapper();
-  private final DataService dataService;
+  protected static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
+  protected static final ObjectMapper MAPPER = new ObjectMapper();
+  protected final DataService dataService;
 
   public TileResource(DataService dataService) {
     this.dataService = dataService;
@@ -78,20 +67,16 @@ public final class TileResource {
   /**
    * Returns the data as points.
    */
-  @GET
-  @Path("{speciesKey}/{z}/{x}/{y}/points.pbf")
-  @Timed
-  @Produces("application/x-protobuf")
   public byte[] points(
-    @PathParam("z") int z, @PathParam("x") int x, @PathParam("y") int y, @PathParam("speciesKey") int speciesKey,
-    @QueryParam("minYear") int minYear, @QueryParam("maxYear") int maxYear,
-    @QueryParam("yearThreshold") final int yearThreshold, @Context HttpServletResponse response
+    int z, int x, int y, int speciesKey,
+    int minYear, int maxYear,
+    final int yearThreshold, HttpServletResponse response
   ) throws IOException {
     // open the tiles to the world
     response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
     response.addHeader("Access-Control-Allow-Origin", "*");
 
-    List<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, yearThreshold);
+    Collection<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, yearThreshold);
     if (!speciesFeatures.isEmpty()) {
       Map<Point2D, Map<String, Integer>> groupFeatures = getIndexedGroupFeatures(minYear, maxYear);
       LOG.info("Found {} features in total for the group", groupFeatures.size());
@@ -115,7 +100,7 @@ public final class TileResource {
             (int)Math.floor(pixelY%MercatorProjection.TILE_SIZE)};
 
           Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(tileLocalXY[0], tileLocalXY[1]));
-          Map<String, Object> meta = Maps.newHashMap();
+          Map<String, Object> meta = new Object2ObjectOpenHashMap();
           Map<String, Integer> groupYearCounts = groupFeatures.get(new Point2D.Double(feature.getLongitude(), feature.getLatitude()));
           // infer absence
           for (String year : groupYearCounts.keySet()) {
@@ -156,19 +141,15 @@ public final class TileResource {
    * Returns the features for the group, indexed by the geometery.
    */
   private Map<Point2D, Map<String, Integer>> getIndexedGroupFeatures(int minYear,int maxYear) {
-    Map<Point2D, Map<String, Integer>> groupFeatures = Maps.newHashMap();
-    List<PointFeature> group = dataService.getGroupFeatures(minYear, maxYear, 1); // require at least 1 year of data
+    Map<Point2D, Map<String, Integer>> groupFeatures = new Object2ObjectOpenHashMap();
+    Collection<PointFeature> group = dataService.getGroupFeatures(minYear, maxYear, 1); // require at least 1 year of data
     for (PointFeature f : group) {
       groupFeatures.put(new Point2D.Double(f.getLongitude(), f.getLatitude()), f.getYearCounts());
     }
     return groupFeatures;
   }
 
-  @GET
-  @Path("/autocomplete")
-  @Timed
-  @Produces("application/json")
-  public List<ScientificName> autocomplete(@QueryParam("prefix") String prefix, @Context HttpServletResponse response) {
+  public List<ScientificName> autocomplete(String prefix, HttpServletResponse response) {
     response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
     response.addHeader("Access-Control-Allow-Origin", "*");
 
@@ -179,26 +160,22 @@ public final class TileResource {
   /**
    * Perfroms an ad hoc regression based on the input parameters.
    */
-  @GET
-  @Path("{speciesKey}/regression.json")
-  @Timed
-  @Produces("application/json")
   public Map<String, Object> adhocRegression(
-    @PathParam("speciesKey") int speciesKey, @QueryParam("minYear") int minYear, @QueryParam("maxYear") int maxYear,
-    @QueryParam("yearThreshold") int yearThreshold, @QueryParam("minLat") double minLatitude, @QueryParam("maxLat") double maxLatitude,
-    @QueryParam("minLng") double minLongitude, @QueryParam("maxLng") double maxLongitude, @Context HttpServletResponse response
+    int speciesKey, int minYear, int maxYear,
+    int yearThreshold, double minLatitude, double maxLatitude,
+    double minLongitude, double maxLongitude, HttpServletResponse response
   ) throws IOException {
     // open the tiles to the world
     response.addHeader("Allow-Control-Allow-Methods", "GET,OPTIONS");
     response.addHeader("Access-Control-Allow-Origin", "*");
-    Map<String, Object> data = Maps.newHashMap(); // response
+    Map<String, Object> data = new Object2ObjectOpenHashMap(); // response
 
-    List<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, 1);
+    Collection<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, 1);
     if (!speciesFeatures.isEmpty()) {
-      List<PointFeature> groupFeatures = dataService.getGroupFeatures(minYear, maxYear, 1); // require at least 1 year of data
+      Collection<PointFeature> groupFeatures = dataService.getGroupFeatures(minYear, maxYear, 1); // require at least 1 year of data
 
-      Map<String, AtomicInteger> speciesCounts = Maps.newHashMap();
-      Map<String, AtomicInteger> groupCounts = Maps.newHashMap();
+      Map<String, AtomicInteger> speciesCounts = new Object2ObjectOpenHashMap();
+      Map<String, AtomicInteger> groupCounts = new Object2ObjectOpenHashMap();
       collectPoints(minLatitude, maxLatitude, minLongitude, maxLongitude, speciesFeatures, speciesCounts);
       collectPoints(minLatitude, maxLatitude, minLongitude, maxLongitude, groupFeatures, groupCounts);
       LOG.info("Found {} years with species and {} years with groups", speciesCounts.size(), groupCounts.size());
@@ -235,11 +212,11 @@ public final class TileResource {
    * Collects the year data for the source features into the target map.
    */
   private void collectPoints(
-    @QueryParam("minLat") double minLatitude,
-    @QueryParam("maxLat") double maxLatitude,
-    @QueryParam("minLng") double minLongitude,
-    @QueryParam("maxLng") double maxLongitude,
-    List<PointFeature> source,
+    double minLatitude,
+    double maxLatitude,
+    double minLongitude,
+    double maxLongitude,
+    Collection<PointFeature> source,
     Map<String, AtomicInteger> target
   ) {
     for (PointFeature feature : source) {
@@ -260,14 +237,10 @@ public final class TileResource {
   /**
    * Returns the data as hex grids.
    */
-  @GET
-  @Path("{speciesKey}/{z}/{x}/{y}/hex.pbf")
-  @Timed
-  @Produces("application/x-protobuf")
   public byte[] hex(
-    @PathParam("z") final int z, @PathParam("x") final int x, @PathParam("y") final int y, @PathParam("speciesKey") int speciesKey,
-    @QueryParam("minYear") int minYear, @QueryParam("maxYear") int maxYear,
-    @QueryParam("yearThreshold") Integer yearThreshold, @QueryParam("radius") Integer hexRadius, @Context HttpServletResponse response
+    final int z, final int x, final int y, int speciesKey,
+    int minYear, int maxYear,
+    int yearThreshold, Integer hexRadius, HttpServletResponse response
   ) throws IOException {
 
     // open the tiles to the world
@@ -277,7 +250,7 @@ public final class TileResource {
     // We cannot pass a year threshold here since we are grouping to the hexagon, and need to apply the threshold to
     // the hexagon in total.  There should be no features with 0 years, but we use 1 since a point with no year data
     // within our time period makes no sense.
-    List<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, 1);
+    Collection<PointFeature> speciesFeatures = dataService.getSpeciesFeatures(speciesKey, minYear, maxYear, 1);
     LOG.debug("Found {} features", speciesFeatures.size());
 
     if (!speciesFeatures.isEmpty()) {
@@ -317,7 +290,7 @@ public final class TileResource {
       final double offsetY = (y*(MercatorProjection.TILE_SIZE%hexHeight))%hexHeight;
 
       // for each feature returned from the DB locate its hexagon and store the data on the hexagon
-      Set<Hexagon> dataCells = Sets.newHashSet();
+      Set<Hexagon> dataCells = new ObjectOpenHashSet();
       Stopwatch timer = Stopwatch.createStarted();
       for(PointFeature feature : speciesFeatures) {
         Hexagon hex = addFeatureInHex((byte) z,
@@ -338,9 +311,9 @@ public final class TileResource {
       LOG.info("Adding species: {} msecs", timer.elapsed(TimeUnit.MILLISECONDS));
       timer.reset().start();
       // require at least 1 year of data within the range, or else it is a meaningless feature
-      List<PointFeature> groupFeatures  = dataService.getGroupFeatures(minYear, maxYear, 1);
+      Collection<PointFeature> groupFeatures  = dataService.getGroupFeatures(minYear, maxYear, 1);
       LOG.info("Group lookup: {} msecs", timer.elapsed(TimeUnit.MILLISECONDS));
-      timer.reset();
+      timer.reset().start();
       for(PointFeature feature : groupFeatures) {
         addFeatureInHex((byte) z,
                         hexWidth,
@@ -377,7 +350,7 @@ public final class TileResource {
           Polygon poly = new Polygon(linear, null, GEOMETRY_FACTORY);
 
           Map<String,Integer> groupCounts = data.<Map<String,Integer>>getCustomData("groupCounts").get(); // must exist
-          Map<String, Object> meta = Maps.newHashMap();
+          Map<String, Object> meta = new Object2ObjectOpenHashMap();
 
           // convert hexagon centers to global pixel space, and find the lat,lng centers
           meta.put("id",
@@ -440,8 +413,8 @@ public final class TileResource {
    * @return the hexagon or null when the hexagon is not on the hex grid or if satellite data is null and it cannot be
    * created.
    */
-  private Hexagon addFeatureInHex(
-    @PathParam("z") byte z,
+  protected Hexagon addFeatureInHex(
+    byte z,
     double hexWidth,
     double hexHeight,
     int minTilePixelX,
@@ -500,7 +473,7 @@ public final class TileResource {
   /**
    * Rounds to 3 decimal places
    */
-  private static double roundThreeDecimals(double d) {
+  protected static double roundThreeDecimals(double d) {
     DecimalFormat twoDForm = new DecimalFormat("#.###");
     return Double.valueOf(twoDForm.format(d));
   }

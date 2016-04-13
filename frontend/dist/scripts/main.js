@@ -61,7 +61,7 @@ function setStatLayers(key, type, hexRadius, yearThreshold) {
     };
     var paint = layerType == 'fill' ? paintFill : paintCircle;
 
-    var regressionTiles = 'http://trobertson:7001/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
+    var regressionTiles = 'http://trobertson:7001/aves/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
     //var regressionTiles = 'http://tiletest.gbif.org/' + key + '/{z}/{x}/{y}/' + type + ".pbf?minYear=" + minYear + "&maxYear=" + maxYear + "&yearThreshold=" + yearThreshold + "&radius=" + hexRadius;
     map.addSource('regression', {
         type: 'vector',

@@ -1,9 +1,10 @@
 package org.gbif.population;
 
-
-import org.gbif.population.data.DataDAO;
+import org.gbif.population.data.AvesDAO;
 import org.gbif.population.data.DataService;
-import org.gbif.population.resource.TileResource;
+import org.gbif.population.data.LepidopteraDAO;
+import org.gbif.population.resource.AvesResource;
+import org.gbif.population.resource.LepidopteraResource;
 
 import io.dropwizard.Application;
 import io.dropwizard.jdbi.DBIFactory;
@@ -36,8 +37,12 @@ public class TileServerApplication extends Application<TileServerConfiguration> 
 
     final DBIFactory factory = new DBIFactory();
     final DBI jdbi = factory.build(environment, configuration.getDataSourceFactory(), "MySQL");
-    final DataDAO dataDao = jdbi.onDemand(DataDAO.class);
-    final DataService dataService = new DataService(dataDao);
-    environment.jersey().register(new TileResource(dataService));
+    final LepidopteraDAO lepidopteraDao = jdbi.onDemand(LepidopteraDAO.class);
+    final AvesDAO avesDao = jdbi.onDemand(AvesDAO.class);
+
+    final DataService lepidopteraService = new DataService(lepidopteraDao);
+    final DataService avesService = new DataService(avesDao);
+    environment.jersey().register(new LepidopteraResource(lepidopteraService));
+    environment.jersey().register(new AvesResource(avesService));
   }
 }
