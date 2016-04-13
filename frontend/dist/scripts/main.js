@@ -8,11 +8,12 @@ var mapType = $('#mapType').val();
 var hexRadius = $('#hexRadius').val();
 var yearThreshold = $('#yearThreshold').val();
 var lastClickedPoint;
+var map;
 
 /**
  * Initialises the map, taking the year slider into consideration.
  */
-function initMap(map) {
+function initMap() {
     $('.charts').hide();
     removeStatLayers();
     setStatLayers(key, mapType, hexRadius, yearThreshold);
@@ -151,7 +152,7 @@ function setStatLayers(key, type, hexRadius, yearThreshold) {
 }
 
 
-var map = new mapboxgl.Map({
+map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/light-v8',
     center: [10, 50],
@@ -163,7 +164,8 @@ var map = new mapboxgl.Map({
 map.addControl(new mapboxgl.Navigation());
 
 map.on('style.load', function () {
-    $('.media.isActive').trigger('click');
+    key = $('#SpeciesSelect').val();
+    initMap();
 });
 
 
@@ -182,7 +184,6 @@ map.on('click', function (e) {
  */
 function selectFeatureAtPoint(e) {
     if (!map.getLayer('regression')) return;
-    $('main').removeClass('mapFocus');
     map.featuresAt(e.point, {
         radius: 3,
         includeGeometry: true,
@@ -192,7 +193,7 @@ function selectFeatureAtPoint(e) {
         if (err || !features.length) {
             return;
         }
-
+        $('main').removeClass('mapFocus');
         //normalize
         var data = features[0].properties;
         showStats(data);
@@ -249,10 +250,15 @@ function updateMap(select) {
 
 function updateYearThreshold(select) {
     yearThreshold = select.value;
-    initMap(map);
+    initMap();
 }
 
 function updateHexThreshold(select) {
     hexRadius = select.value;
-    initMap(map);
+    initMap();
+}
+
+function updateSpecies(select) {
+    key = select.value;
+    initMap();
 }

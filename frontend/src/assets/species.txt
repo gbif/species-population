@@ -1,4 +1,0 @@
-key,name
-123,abc
-234,bcd
-1898286,virker

@@ -20,6 +20,7 @@
     "gulp-autoprefixer": "^3.1.0",
     "gulp-concat": "^2.6.0",
     "gulp-cssnano": "^2.1.1",
+    "gulp-hash": "^3.0.6",
     "gulp-hash-filename": "^1.0.1",
     "gulp-if": "^2.0.0",
     "gulp-inject": "^4.0.0",

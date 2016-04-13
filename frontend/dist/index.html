@@ -30,8 +30,7 @@
     <link href='https://cdnjs.cloudflare.com/ajax/libs/chartist/0.9.7/chartist.min.css' rel='stylesheet'/>
 
     <!-- style:css -->
-    <link rel="stylesheet" type="text/css" href="css/index.css">
-    <link rel="stylesheet" type="text/css" href="css/mapbox-gl-draw.css">
+    <link rel="stylesheet" href="/css/index.min-1e3b6df1.css">
     <!-- endinject -->
 
 
@@ -176,32 +175,11 @@
                     <div class="speciesSelector step">
                         <span class="numbering">1</span>
                         <p>Select a species</p>
-                        <ul class="specieslist">
-                            <li class="media isActive" data-key="1898286">
-                                <img src="http://api.gbif.org/v1/image?url=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2Fe%2Fe7%2FAdmiral01.jpg&size=s">
-                                <p>Red Admiral</p>
-                                <p>Vanessa atalanta</p>
-                            </li>
-                            <li class="media" data-key="1958323">
-                                <img src="http://api.gbif.org/v1/image?url=http%3A%2F%2Fupload.wikimedia.org%2Fwikipedia%2Fcommons%2F4%2F43%2FOurapteryx_sambucaria01..jpg&size=s">
-                                <p>Swallow-tailed moth</p>
-                                <p>Ourapteryx sambucaria</p>
-                            </li>
-                            <li class="media" data-key="1962204">
-                                <img src="http://api.gbif.org/v1/image?url=http%3A%2F%2Fwww.lepiforum.de%2Flepidopterenforum%2Flepiwiki%2Fpics%2Fheidrun_melzer%2Fdentaria_Selenia_2_f-OS2.jpg&size=s">
-                                <p>Selenia dentaria</p>
-                                <p>Early thorn</p>
-                            </li>
-                            <li class="media" id="speciesTypeahead">
-                                <img>
-                                <p>
-                                    <span class="speciesTypeahead">
-                                        <input class="typeahead" type="text" placeholder="Search species. e.g. Hoplodrina ambigua">
-                                    </span>
-                                </p>
-                            </li>
-                        </ul>
-
+                        <select onchange="updateSpecies(this)" id="SpeciesSelect">
+                            <option value="1898286" select>Red Admiral (Vanessa atalanta)</option>
+                            <option value="1958323">Swallow-tailed moth (Ourapteryx sambucaria)</option>
+                            <option value="1962204">Early thorn (Selenia dentaria)</option>
+                        </select>
                     </div>
                     <div class="step">
                         <span class="numbering">2</span>
@@ -281,20 +259,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.3.0/nouislider.min.js"></script>
 <!-- inject:js -->
-<script src="scripts/jquery.min.js"></script>
-<script src="scripts/typeahead.bundle.min.js"></script>
-<script src="scripts/mapbox-gl_patched_issue2236.js"></script>
-<!--<script src="/scripts/mapbox-gl-draw.js"></script>-->
-<script src="scripts/chartist.min.js"></script>
-<script src="scripts/chartist-plugin-tooltip.min.js"></script>
-<!--<script src="/scripts/chapters.js"></script>-->
-<script src="scripts/chart.js"></script>
-<script src="scripts/main.js"></script>
-<script src="scripts/draw.js"></script>
-<script src="scripts/app.js"></script>
-
-
-<!--<script src="scripts/navigation.js"></script>-->
+<script src="/scripts/script.min-e307c05f.js"></script>
 <!-- endinject -->
 </body>
 </html>

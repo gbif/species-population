@@ -3,16 +3,16 @@ var gulp = require('gulp'),
     config = rootRequire('gulp/config');
 
 gulp.task('optimize', function () {
-    var cssStream = gulp.src('./dist/css/**/*.css')
-        //.pipe(g.concat('index.css'))
-        //.pipe(g.cssnano())
+    var cssStream = gulp.src(['./dist/css/**/*.css', './dist/css/**/index.css'])
+        .pipe(g.concat('index.css'))
+        .pipe(g.cssnano())
         .pipe(g.rename(function (path) {
             path.basename += ".min";
         }))
-        .pipe(g.hashFilename({ "format": "{name}-{hash}{ext}" }))
+        .pipe(g.hash())
         .pipe(gulp.dest('./dist/css/'));
 
-    var jsStream = gulp.src('./dist/scripts/**/*.js')
+    var jsStream = gulp.src(config.js.src)
         .pipe(g.sourcemaps.init({
             loadMaps: true
         }))
@@ -22,7 +22,7 @@ gulp.task('optimize', function () {
         .pipe(g.rename(function (path) {
             path.basename += ".min";
         }))
-        .pipe(g.hashFilename({ "format": "{name}-{hash}{ext}" }))
+        .pipe(g.hash())
         .pipe(gulp.dest('./dist/scripts/'));
 
     return gulp.src('./dist/**/*.html')

@@ -60,7 +60,7 @@ section.story:after {
   margin-left: calc(100% - 400px);
 }
 .storyline .chapter {
-  padding: 50px 50px;
+  padding: 25px 50px;
   min-height: 100vh;
 }
 @media screen and (max-width: 800px) {
@@ -240,6 +240,7 @@ section.story:after {
 .blanket .blanket__close {
   float: right;
   cursor: pointer;
+  margin-top: -20px;
 }
 .blanket .blanket__close.button {
   display: block;

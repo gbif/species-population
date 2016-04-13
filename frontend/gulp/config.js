@@ -15,13 +15,17 @@ var config = {
     js: {
         paths: [path.join(src, 'js/**/*.js')],
         src: [
+            './bower_components/jquery/dist/jquery.min.js',
             './bower_components/typeahead.js/dist/typeahead.bundle.min.js',
             './node_modules/mapbox-gl-draw/dist/mapbox-gl-draw.js',
-            './bower_components/jquery/dist/jquery.min.js',
             './bower_components/chartist/dist/chartist.min.js',
             './bower_components/chartist-plugin-tooltip/dist/chartist-plugin-tooltip.min.js',
             path.join(src, 'js/mapbox-gl_patched_issue2236.js'),
-            path.join(src, 'js/**/*.js')],
+            path.join(src, 'js/chart.js'),
+            path.join(src, 'js/main.js'),
+            path.join(src, 'js/draw.js'),
+            path.join(src, 'js/app.js')
+        ],
         dest: path.join(dest, 'scripts')
     },
     html: {
