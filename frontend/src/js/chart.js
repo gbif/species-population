@@ -116,7 +116,8 @@ function showStats(data) {
     //$('#significance span').html(data.significance);
     //$('#slopeStdErr span').html(data.slopeStdErr);
 
-    $('.statsHighlight .statsHighlight__year>div').html( (Math.round(100000*data.slope)/100) + ' ‱');
+    $('.statsHighlight .statsHighlight__year>div').attr('title', data.slope);
+    $('.statsHighlight .statsHighlight__year>div').html( (Math.round(1000000*data.slope)/100) + ' ‱');
     if (data.slope < 0) $('.statsHighlight .statsHighlight__year').addClass('negative');
     else $('.statsHighlight .statsHighlight__year').removeClass('negative');
 
