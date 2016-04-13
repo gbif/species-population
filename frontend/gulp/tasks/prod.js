@@ -26,7 +26,7 @@ gulp.task('optimize', function () {
         .pipe(gulp.dest('./dist/scripts/'));
 
     return gulp.src('./dist/**/*.html')
-        .pipe(g.inject(cssStream, {ignorePath: '/dist', addRootSlash: true, name: 'style'}))
-        .pipe(g.inject(jsStream, {ignorePath: '/dist', addRootSlash: true}))
+        .pipe(g.inject(cssStream, {ignorePath: '/dist', addRootSlash: false, name: 'style'}))
+        .pipe(g.inject(jsStream, {ignorePath: '/dist', addRootSlash: false}))
         .pipe(gulp.dest(config.html.dest));
 });
