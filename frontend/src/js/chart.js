@@ -116,15 +116,15 @@ function showStats(data) {
     //$('#significance span').html(data.significance);
     //$('#slopeStdErr span').html(data.slopeStdErr);
 
-    $('.statsHighlight .statsHighlight__year>div').html( (Math.round(10000*data.slope)/100) + ' %');
-    if (data.slope < 0) $('.statsHighlight .statsHighlight__year>div').addClass('negative');
-    else $('.statsHighlight .statsHighlight__year>div').removeClass('negative');
+    $('.statsHighlight .statsHighlight__year>div').html( (Math.round(100000*data.slope)/100) + ' ‱');
+    if (data.slope < 0) $('.statsHighlight .statsHighlight__year').addClass('negative');
+    else $('.statsHighlight .statsHighlight__year').removeClass('negative');
 
     if (line[0] > 0 && line[line.length-1] > 0) {
         var estChange = Math.round(100*line[line.length-1]/line[0]);
         $('.statsHighlight .statsHighlight__yearspan>div').html(estChange + ' %');
-        if (data.slope < 0) $('.statsHighlight .statsHighlight__yearspan>div').addClass('negative');
-        else $('.statsHighlight .statsHighlight__yearspan>div').removeClass('negative');
+        if (data.slope < 0) $('.statsHighlight .statsHighlight__yearspan').addClass('negative');
+        else $('.statsHighlight .statsHighlight__yearspan').removeClass('negative');
         $('.statsHighlight .statsHighlight__yearspan').show();
     } else {
         $('.statsHighlight .statsHighlight__yearspan').hide();
