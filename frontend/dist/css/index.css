@@ -177,12 +177,12 @@ section.story:after {
   margin: 0;
   font-size: 0.9em;
 }
-#speciesTypeahead > p {
-  display: inline-block;
-  width: calc(100% - 20px - 64px);
+#speciesTypeahead {
+  display: block;
+  width: 100%;
 }
-#speciesTypeahead > p >span,
-#speciesTypeahead > p >span>span {
+#speciesTypeahead >span,
+#speciesTypeahead >span>span {
   display: inline-block;
   width: 100%;
 }
